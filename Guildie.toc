@@ -15,3 +15,4 @@ Core.lua
 Armory.lua
 UI.lua
 ArmoryUI.lua
+Minimap.lua

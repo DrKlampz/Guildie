@@ -215,6 +215,10 @@ local function Build()
         y = y - 15
     end
 
+    -- Minimap -------------------------------------------------------------
+    Check("minimapShow", "Show minimap button",
+        "Left-click the minimap button for the Guild Armory, right-click for these settings. Drag it to move it.")
+
     y = y - 12
     frame.stats = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     frame.stats:SetPoint("TOPRIGHT", -PAD, y - 4)
@@ -243,6 +247,7 @@ StaticPopupDialogs["GUILDIE_RESET"] = {
 -- Refresh
 ---------------------------------------------------------------------------
 function ns.RefreshUI()
+    if ns.UpdateMinimapButton then ns.UpdateMinimapButton() end
     if not frame or not frame:IsShown() or not ns.db then return end
     local db = ns.db
 

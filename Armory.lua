@@ -377,8 +377,38 @@ Reg("TRAIT_CONFIG_UPDATED")
 Reg("PLAYER_LEVEL_UP")
 Reg("CHAT_MSG_ADDON")
 Reg("INSPECT_READY")
+Reg("GUILD_ROSTER_UPDATE")
+Reg("PLAYER_GUILD_UPDATE")
 
-local loggedIn = false
+-- Login sync. Right after login the client often hasn't loaded the guild yet: IsInGuild()
+-- is false and the roster is empty, so a fixed timer can fire too early and the share is
+-- silently dropped. Wait until the guild and roster are actually there, then share.
+local loggedIn, loginSynced, syncedGuild = false, false, nil
+
+local function GuildReady()
+    if not IsInGuild() then return false end
+    local g = GetGuildInfo("player")
+    if not g or IsSecret(g) then return false end
+    local n = GetNumGuildMembers()
+    return n ~= nil and n > 0
+end
+
+local function TryLoginSync(attempt)
+    if loginSynced or not loggedIn then return end
+    if GuildReady() then
+        loginSynced = true
+        syncedGuild = GetGuildInfo("player")
+        A.Broadcast(true)
+        Send("HELLO^" .. PROTO, "GUILD")
+        ns.Debug("armory: shared your gear and talents with the guild (login)")
+        return
+    end
+    if C_GuildInfo and C_GuildInfo.GuildRoster then pcall(C_GuildInfo.GuildRoster) end
+    if attempt < 40 then                                  -- keep checking for ~2 minutes
+        C_Timer.After(3, function() TryLoginSync(attempt + 1) end)
+    end
+end
+
 f:SetScript("OnEvent", function(_, event, ...)
     if event == "PLAYER_ENTERING_WORLD" then
         if loggedIn then return end
@@ -386,15 +416,22 @@ f:SetScript("OnEvent", function(_, event, ...)
         if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
             pcall(C_ChatInfo.RegisterAddonMessagePrefix, PREFIX)
         end
-        C_Timer.After(8, function()
-            A.Broadcast(true)
-            Send("HELLO^" .. PROTO, "GUILD")
-        end)
+        C_Timer.After(5, function() TryLoginSync(0) end)
+    elseif event == "GUILD_ROSTER_UPDATE" then
+        if loggedIn and not loginSynced then C_Timer.After(1, function() TryLoginSync(40) end) end
+    elseif event == "PLAYER_GUILD_UPDATE" then
+        -- joined (or changed) a guild: share with the new guild
+        local g = IsInGuild() and GetGuildInfo("player")
+        if loggedIn and g and not IsSecret(g) and g ~= syncedGuild then
+            loginSynced = false
+            C_Timer.After(3, function() TryLoginSync(0) end)
+        end
     elseif event == "CHAT_MSG_ADDON" then
         A.OnAddonMessage(...)
     elseif event == "INSPECT_READY" then
         A.OnInspectReady(...)
-    else
+    elseif loginSynced then
+        -- gear / talents / level changed after login: share the update
         A.ScheduleBroadcast(5)
     end
 end)

@@ -16,6 +16,9 @@ ns.DEFAULTS = {
     welcomeOnlyMine = true,   -- only welcome players Guildie invited (stops double welcomes between officers)
     welcomeDelay   = 3,
     debug          = false,   -- /guildie debug: print why each whisper was or wasn't acted on
+    -- Minimap button
+    minimapShow    = true,
+    minimapAngle   = 200,
     -- Stats
     stats          = { invited = 0, welcomed = 0 },
 }
@@ -433,6 +436,10 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("Welcome message set to: " .. rest)
     elseif cmd == "armory" or cmd == "a" then
         ns.ToggleArmory()
+    elseif cmd == "minimap" then
+        db.minimapShow = (db.minimapShow == false)
+        ns.UpdateMinimapButton()
+        ns.Print("Minimap button " .. (db.minimapShow and "shown." or "hidden. Type /guildie minimap to bring it back."))
     elseif cmd == "synctest" then
         ns.Armory.SyncTest()
     elseif cmd == "debug" then
@@ -444,6 +451,7 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("/guildie - open settings")
         ns.Print("/guildie armory - open the guild armory")
         ns.Print("/guildie synctest - check whether guild sync works on this client")
+        ns.Print("/guildie minimap - show or hide the minimap button")
         ns.Print("/guildie on | off - toggle auto-invite")
         ns.Print("/guildie phrase <text> - set the whisper phrase")
         ns.Print("/guildie welcome <text> - set the welcome message ({name}, {guild})")
