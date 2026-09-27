@@ -111,11 +111,50 @@ local function ChatLocked()
     return false
 end
 
+-- Forever flags SendChatMessage as restricted (it may need a real click). We can't always
+-- tell from the call itself, so we watch for our own message to come back (guild echo /
+-- whisper inform). If it doesn't show up, the message didn't go out: fall back to a click.
+local echoWatch = {}
+
+function ns.SendNow(text, chan, target)            -- call only from a click handler
+    return pcall(SendChat, text, chan, nil, target)
+end
+
+local function WatchEcho(m)
+    local w = { text = m.text, chan = m.chan, onFail = m.onFail, done = false }
+    echoWatch[#echoWatch + 1] = w
+    m.watch = w
+    C_Timer.After(4, function()
+        for i, x in ipairs(echoWatch) do if x == w then table.remove(echoWatch, i) break end end
+        if not w.done then
+            ns.chatNeedsClick = true
+            ns.Debug("  no echo for " .. w.chan .. " message: the game didn't send it")
+            if w.onFail then w.onFail(w.text) end
+        end
+    end)
+end
+
+function ns.OnChatEcho(chan, text)
+    for _, w in ipairs(echoWatch) do
+        -- a secret echo can't be compared; count it for the oldest message on that channel
+        if not w.done and w.chan == chan and (IsSecret(text) or w.text == text) then
+            w.done = true
+            return
+        end
+    end
+end
+
 local function Flush()
     flushPending = false
     while #queue > 0 and not ChatLocked() do
         local m = table.remove(queue, 1)
-        SendChat(m.text, m.chan, nil, m.target)
+        if m.onFail then WatchEcho(m) end            -- watch first: the echo can arrive immediately
+        local ok = pcall(SendChat, m.text, m.chan, nil, m.target)
+        if not ok then
+            ns.chatNeedsClick = true
+            if m.watch then m.watch.done = true end  -- fail now, not again after the timeout
+            if m.onFail then m.onFail(m.text) end
+        end
     end
     if #queue > 0 and not flushPending then
         flushPending = true
@@ -123,31 +162,44 @@ local function Flush()
     end
 end
 
-function ns.Say(text, chan, target)
+function ns.Say(text, chan, target, onFail)
     if Trim(text) == "" then return end
     ns.Debug(("  sending %s: %s"):format(chan, text))
-    queue[#queue + 1] = { text = text, chan = chan, target = target }
+    queue[#queue + 1] = { text = text, chan = chan, target = target, onFail = onFail }
     Flush()
 end
 
 ---------------------------------------------------------------------------
 -- Inviting
 ---------------------------------------------------------------------------
-function ns.DoInvite(name)
+-- fromClick: called from a button the player clicked, so restricted calls are allowed.
+-- Anything that needs the click (the reply whisper) has to happen right here, not on a timer.
+function ns.DoInvite(name, fromClick)
     ns.blockedAt = nil
     Invite(name)
     ns.invitedByMe[Key(name)] = GetTime()
     ns.StartRosterPoll()
+    if fromClick and db.replyEnabled then
+        ns.SendNow(ns.Fill(db.replyText, name), "WHISPER", name)
+    end
     -- Give ADDON_ACTION_BLOCKED a moment to fire before we tell anyone it worked
     C_Timer.After(0.5, function()
         if ns.blockedAt then
-            ns.Log(name, "|cffff5555Invite blocked|r")
+            if fromClick then
+                ns.Log(name, "|cffff5555Invite blocked by the game|r")
+            else
+                -- don't drop the recruit: ask for the click the game wants
+                ns.Log(name, "|cffffaa00Invite needs your click|r")
+                StaticPopup_Show("GUILDIE_CONFIRM", ShortName(name), nil, name)
+            end
             return
         end
         db.stats.invited = db.stats.invited + 1
         ns.Log(name, "|cff55ff55Invited|r")
-        if db.replyEnabled then
-            ns.Say(ns.Fill(db.replyText, name), "WHISPER", name)
+        if db.replyEnabled and not fromClick then
+            ns.Say(ns.Fill(db.replyText, name), "WHISPER", name, function()
+                ns.Log(name, "|cffffaa00Reply whisper needs a click (game restriction)|r")
+            end)
         end
     end)
 end
@@ -156,17 +208,52 @@ StaticPopupDialogs["GUILDIE_CONFIRM"] = {
     text = "|cffffd100%s|r whispered your invite phrase.\nSend a guild invite?",
     button1 = ACCEPT,
     button2 = CANCEL,
-    OnAccept = function(_, data) ns.DoInvite(data) end,
+    OnAccept = function(_, data) ns.DoInvite(data, true) end,
     timeout = 60,
     whileDead = true,
     hideOnEscape = true,
     preferredIndex = 3,
 }
 
-local function OnWhisper(msg, sender)
+-- During chat lockdown a whisper's text and sender arrive secret. Its lineID never is,
+-- so remember it and read the line again once lockdown ends.
+local lockedLines, lockPolling = {}, false
+local OnWhisper
+
+local function PollLockedLines()
+    lockPolling = false
+    if #lockedLines == 0 then return end
+    if not ChatLocked() and C_ChatInfo and C_ChatInfo.GetChatLineText then
+        local now = GetTime()
+        for i = #lockedLines, 1, -1 do
+            local e = lockedLines[i]
+            local okT, text = pcall(C_ChatInfo.GetChatLineText, e.lineID)
+            local okS, who = pcall(C_ChatInfo.GetChatLineSenderName, e.lineID)
+            if okT and okS and text and who and not IsSecret(text) and not IsSecret(who) then
+                table.remove(lockedLines, i)
+                ns.Debug("recovered a whisper from chat lockdown (line " .. e.lineID .. ")")
+                OnWhisper(text, who)
+            elseif now - e.t > 900 then
+                table.remove(lockedLines, i)                -- give up after 15 minutes
+            end
+        end
+    end
+    if #lockedLines > 0 then
+        lockPolling = true
+        C_Timer.After(2, PollLockedLines)
+    end
+end
+
+OnWhisper = function(msg, sender, lineID)
     if not db.enabled then return end
     if IsSecret(msg) or IsSecret(sender) then
-        ns.Debug("whisper skipped: message is a secret value (chat restricted right now)")
+        if lineID and not IsSecret(lineID) then
+            lockedLines[#lockedLines + 1] = { lineID = lineID, t = GetTime() }
+            ns.Debug("whisper arrived during chat lockdown; will read it when lockdown ends")
+            if not lockPolling then lockPolling = true C_Timer.After(2, PollLockedLines) end
+        else
+            ns.Debug("whisper skipped: unreadable (chat lockdown) and no line ID")
+        end
         return
     end
 
@@ -274,9 +361,24 @@ local function Welcome(who, source)
     ns.invitedByMe[k] = nil
 
     C_Timer.After(tonumber(db.welcomeDelay) or 3, function()
-        ns.Say(ns.Fill(db.welcomeText, who), "GUILD")
-        db.stats.welcomed = db.stats.welcomed + 1
-        ns.Log(who, "|cff66ccffJoined + welcomed|r")
+        local text = ns.Fill(db.welcomeText, who)
+        local function needClick()
+            ns.Log(who, "|cffffaa00Joined: welcome waiting for your click|r")
+            if ns.ShowSendToast then
+                ns.ShowSendToast("Welcome " .. ShortName(who) .. " to the guild?", text, "GUILD", nil, function()
+                    db.stats.welcomed = db.stats.welcomed + 1
+                    ns.Log(who, "|cff66ccffJoined + welcomed|r")
+                end)
+            end
+        end
+        if ns.chatNeedsClick then needClick() return end   -- already learned: go straight to the toast
+        ns.Say(text, "GUILD", nil, needClick)
+        C_Timer.After(4.5, function()
+            if not ns.chatNeedsClick then
+                db.stats.welcomed = db.stats.welcomed + 1
+                ns.Log(who, "|cff66ccffJoined + welcomed|r")
+            end
+        end)
     end)
 end
 
@@ -374,7 +476,8 @@ end
 local f = CreateFrame("Frame")
 -- An event this client doesn't have RAISES and would abort the file, so guard each one
 for _, ev in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "CHAT_MSG_WHISPER", "CHAT_MSG_SYSTEM",
-    "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN", "PLAYER_GUILD_UPDATE", "GUILD_ROSTER_UPDATE" }) do
+    "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN", "PLAYER_GUILD_UPDATE", "GUILD_ROSTER_UPDATE",
+    "CHAT_MSG_GUILD", "CHAT_MSG_WHISPER_INFORM" }) do
     pcall(f.RegisterEvent, f, ev)
 end
 
@@ -393,7 +496,13 @@ f:SetScript("OnEvent", function(_, event, ...)
         if RequestRoster then pcall(RequestRoster) end
     elseif event == "CHAT_MSG_WHISPER" then
         local msg, sender = ...
-        OnWhisper(msg, sender)
+        OnWhisper(msg, sender, (select(11, ...)))
+    elseif event == "CHAT_MSG_GUILD" then
+        local text, _, _, _, _, _, _, _, _, _, _, guid = ...
+        local me = UnitGUID("player")
+        if IsSecret(guid) or (guid and me and not IsSecret(me) and guid == me) then ns.OnChatEcho("GUILD", text) end
+    elseif event == "CHAT_MSG_WHISPER_INFORM" then
+        ns.OnChatEcho("WHISPER", (...))
     elseif event == "CHAT_MSG_SYSTEM" then
         OnSystem((...))
     elseif event == "ADDON_ACTION_BLOCKED" or event == "ADDON_ACTION_FORBIDDEN" then
@@ -404,8 +513,12 @@ f:SetScript("OnEvent", function(_, event, ...)
             ns.blockedAt = GetTime()
             if not db.confirm then
                 db.confirm = true
-                ns.Print("The game blocked the automatic invite. Switched to confirm mode: you'll get a popup to click instead.")
+                db.confirmAuto = true
+                ns.Print("The game requires a click to send guild invites. Switched to confirm mode: you'll get a popup to click.")
             end
+        elseif func:find("SendChatMessage") then
+            ns.chatNeedsClick = true
+            ns.Debug("the game blocked an automatic chat message; welcomes will ask for a click")
         else
             ns.Print("The game blocked " .. func .. " (" .. event .. ").")
         end

@@ -266,7 +266,8 @@ function ns.RefreshUI()
     if not guild then
         frame.status:SetText("|cffff5555You're not in a guild.|r")
     elseif CanGuildInvite() then
-        frame.status:SetText("Guild: |cffffd100" .. guild .. "|r   |cff55ff55Your rank can invite.|r")
+        frame.status:SetText("Guild: |cffffd100" .. guild .. "|r   |cff55ff55Your rank can invite.|r"
+            .. (db.confirmAuto and "  |cffffaa00(Forever needs a click per invite)|r" or ""))
     else
         frame.status:SetText("Guild: |cffffd100" .. guild .. "|r   |cffff5555Your rank can't invite.|r")
     end
@@ -284,6 +285,71 @@ function ns.RefreshUI()
 
     frame.stats:SetText(("Invited: |cffffffff%d|r   Welcomed: |cffffffff%d|r"):format(
         db.stats.invited, db.stats.welcomed))
+end
+
+---------------------------------------------------------------------------
+-- Click-to-send toast: for chat the game won't let an addon send on its own
+---------------------------------------------------------------------------
+local toast, toastQueue = nil, {}
+
+local function ShowNextToast()
+    if toast and toast:IsShown() then return end
+    local item = table.remove(toastQueue, 1)
+    if not item then return end
+    if not toast then
+        toast = CreateFrame("Frame", "GuildieToast", UIParent, "BackdropTemplate")
+        toast:SetSize(380, 96)
+        toast:SetPoint("TOP", UIParent, "TOP", 0, -150)
+        toast:SetFrameStrata("DIALOG")
+        toast:SetClampedToScreen(true)
+        toast:SetMovable(true)
+        toast:EnableMouse(true)
+        toast:RegisterForDrag("LeftButton")
+        toast:SetScript("OnDragStart", toast.StartMoving)
+        toast:SetScript("OnDragStop", toast.StopMovingOrSizing)
+        if toast.SetBackdrop then
+            toast:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+            toast:SetBackdropColor(0.05, 0.05, 0.07, 0.95)
+            toast:SetBackdropBorderColor(0.2, 1, 0.6, 0.7)
+        end
+        toast.title = toast:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        toast.title:SetPoint("TOPLEFT", 12, -10)
+        toast.title:SetPoint("RIGHT", -12, 0)
+        toast.title:SetJustifyH("LEFT")
+        toast.msg = toast:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        toast.msg:SetPoint("TOPLEFT", toast.title, "BOTTOMLEFT", 0, -6)
+        toast.msg:SetPoint("RIGHT", -12, 0)
+        toast.msg:SetJustifyH("LEFT")
+        toast.msg:SetMaxLines(2)
+        local send = CreateFrame("Button", nil, toast, "UIPanelButtonTemplate")
+        send:SetSize(90, 22)
+        send:SetPoint("BOTTOMRIGHT", -10, 10)
+        send:SetText("Send")
+        send:SetScript("OnClick", function()
+            local it = toast.item
+            toast:Hide()
+            if it then
+                local ok = ns.SendNow(it.text, it.chan, it.target)
+                if ok and it.onSent then it.onSent() end
+            end
+            ShowNextToast()
+        end)
+        local skip = CreateFrame("Button", nil, toast, "UIPanelButtonTemplate")
+        skip:SetSize(80, 22)
+        skip:SetPoint("RIGHT", send, "LEFT", -6, 0)
+        skip:SetText("Skip")
+        skip:SetScript("OnClick", function() toast:Hide() ShowNextToast() end)
+    end
+    toast.item = item
+    toast.title:SetText("|cff33ff99Guildie:|r " .. item.title)
+    toast.msg:SetText("|cff40ff40[" .. item.chan:sub(1, 1) .. item.chan:sub(2):lower() .. "]|r " .. item.text)
+    toast:Show()
+    if PlaySound and SOUNDKIT and SOUNDKIT.TELL_MESSAGE then pcall(PlaySound, SOUNDKIT.TELL_MESSAGE) end
+end
+
+function ns.ShowSendToast(title, text, chan, target, onSent)
+    toastQueue[#toastQueue + 1] = { title = title, text = text, chan = chan, target = target, onSent = onSent }
+    ShowNextToast()
 end
 
 function ns.ToggleUI()
