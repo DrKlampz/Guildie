@@ -1,0 +1,6 @@
+package-as: Guildie
+
+ignore:
+  - README.md
+  - CURSEFORGE.md
+  - media/logo-400.png
