@@ -9,6 +9,21 @@
 ## SavedVariables: GuildieDB
 ## SavedVariablesPerCharacter: GuildieCharDB
 ## X-License: MIT
+## X-Wago-ID: E6gzvON1
+
+Core.lua
+UI.lua
+## Interface: 16001
+## Title: |cff33ff99Guildie|r
+## Notes: Auto guild-invites anyone who whispers your phrase, and posts a custom welcome in guild chat when they join.
+## Author: David
+## Version: @project-version@
+## Category: Chat & Communication
+## IconTexture: Interface\AddOns\Guildie\media\icon
+## AddonCompartmentFunc: Guildie_OnAddonCompartmentClick
+## SavedVariables: GuildieDB
+## SavedVariablesPerCharacter: GuildieCharDB
+## X-License: MIT
 
 Core.lua
 UI.lua
