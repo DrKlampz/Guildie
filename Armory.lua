@@ -189,6 +189,7 @@ function A.CollectSelf()
         talents = talents,
         items   = CollectItems("player"),
         professions = CollectProfessions(),
+        gold    = (GetMoney and GetMoney()) or nil,
         source  = "self",
     }
 end
@@ -205,6 +206,7 @@ local function Serialize(r)
         PROTO, r.class or "", r.level or 0, r.ilvl and math.floor(r.ilvl * 10) or 0, r.time or 0,
         r.loadout or "", table.concat(r.talents or {}, ","), table.concat(items, ";"),
         table.concat(r.professions or {}, ","),
+        r.gold and math.floor(r.gold) or "", r.hidden or "",
     }, "~")
 end
 
@@ -215,7 +217,7 @@ local function Deserialize(s)
     local r = {
         class = f[2] ~= "" and f[2] or nil,
         level = tonumber(f[3]),
-        ilvl = tonumber(f[4]) and tonumber(f[4]) / 10 or nil,
+        ilvl = (tonumber(f[4]) or 0) > 0 and tonumber(f[4]) / 10 or nil,
         time = tonumber(f[5]),
         loadout = f[6] ~= "" and f[6] or nil,
         talents = {}, items = {}, source = "sync",
@@ -224,6 +226,8 @@ local function Deserialize(s)
     for slot, str in f[8]:gmatch("(%d+)=([^;]+)") do r.items[tonumber(slot)] = str end
     r.professions = {}
     for p in (f[9] or ""):gmatch("[^,]+") do r.professions[#r.professions + 1] = p end
+    r.gold = tonumber(f[10] or "")
+    r.hidden = f[11] or ""
     return r
 end
 A.Serialize, A.Deserialize = Serialize, Deserialize
@@ -284,16 +288,31 @@ local function SendChunked(kind, payload, chan, target)
     end
 end
 
+-- Privacy: strip what the player chose not to share. Hidden categories are flagged
+-- (G gear, T talents, P professions, M money) so guildmates see "hidden", not stale data.
+function A.ApplyPrivacy(rec)
+    local db = ns.db or {}
+    local out, hidden = {}, ""
+    for k, v in pairs(rec) do out[k] = v end
+    if db.shareGear == false then out.items, out.ilvl = {}, nil; hidden = hidden .. "G" end
+    if db.shareTalents == false then out.talents, out.loadout = {}, nil; hidden = hidden .. "T" end
+    if db.shareProfessions == false then out.professions = {}; hidden = hidden .. "P" end
+    if db.shareGold ~= true then out.gold = nil; hidden = hidden .. "M" end
+    out.hidden = hidden
+    return out
+end
+
 local lastSnapshot, lastBroadcast = nil, 0
 function A.Broadcast(force)
     local rec = A.CollectSelf()
     local me = A.SelfName()
+    rec.hidden = A.ApplyPrivacy(rec).hidden     -- your own view keeps everything, marked
     Store(me, rec)
     -- drop a record saved under the short first-name form before the roster loaded
     local t = A.GuildTable()
     local short = UnitName("player")
     if t and short and Key(short) ~= Key(me) then t[Key(short)] = nil end
-    local payload = Serialize(rec)
+    local payload = Serialize(A.ApplyPrivacy(rec))
     -- the time field changes every call; compare without it
     local cmp = payload:gsub("^([^~]*~[^~]*~[^~]*~[^~]*~)[^~]*", "%1")
     if not force and cmp == lastSnapshot then return end
@@ -302,11 +321,11 @@ function A.Broadcast(force)
 end
 
 local pendingBroadcast = false
-function A.ScheduleBroadcast(delay)
+function A.ScheduleBroadcast(delay, minInterval)
     if pendingBroadcast then return end
     pendingBroadcast = true
     -- automatic updates at most once a minute (skill-ups while crafting fire constantly)
-    delay = math.max(delay or 5, 60 - (GetTime() - lastBroadcast))
+    delay = math.max(delay or 5, (minInterval or 60) - (GetTime() - lastBroadcast))
     C_Timer.After(delay, function()
         pendingBroadcast = false
         A.Broadcast(false)
@@ -427,6 +446,8 @@ function A.OnInspectReady(guid)
     local t = A.GuildTable()
     local old = t and t[Key(name)]
     if old and old.source == "sync" and old.time and Now() - old.time < 600 then return end
+    -- they chose to hide gear or talents: don't collect them behind their back
+    if old and old.hidden and old.hidden:find("[GT]") then return end
 
     Store(name, {
         class = ClassFile(unit), level = UnitLevel(unit), ilvl = ilvl, time = Now(),
@@ -449,6 +470,7 @@ Reg("INSPECT_READY")
 Reg("GUILD_ROSTER_UPDATE")
 Reg("PLAYER_GUILD_UPDATE")
 Reg("SKILL_LINES_CHANGED")
+Reg("PLAYER_MONEY")
 
 -- Login sync. Right after login the client often hasn't loaded the guild yet: IsInGuild()
 -- is false and the roster is empty, so a fixed timer can fire too early and the share is
@@ -500,6 +522,9 @@ f:SetScript("OnEvent", function(_, event, ...)
         A.OnAddonMessage(...)
     elseif event == "INSPECT_READY" then
         A.OnInspectReady(...)
+    elseif event == "PLAYER_MONEY" then
+        -- gold changes constantly while looting: only matters if shared, at most every 5 min
+        if loginSynced and ns.db and ns.db.shareGold == true then A.ScheduleBroadcast(5, 300) end
     elseif loginSynced then
         -- gear / talents / level changed after login: share the update
         A.ScheduleBroadcast(5)

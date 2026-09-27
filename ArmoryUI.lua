@@ -56,6 +56,16 @@ local function QualityColor(q)
     return 1, 1, 1
 end
 
+local function Hidden(rec, flag) return rec and rec.hidden and rec.hidden:find(flag, 1, true) ~= nil end
+
+local function GoldText(copper)
+    if C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString then
+        local ok, s = pcall(C_CurrencyInfo.GetCoinTextureString, copper)
+        if ok and s then return s end
+    end
+    return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
+end
+
 local InsertLink = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_InsertLink
 
 ---------------------------------------------------------------------------
@@ -114,11 +124,25 @@ local function ShowDetail(e)
         d.title:SetText("|c" .. ClassHex(e.class) .. e.name .. "|r")
         local rec = e.rec
         local cls = e.class and (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[e.class] or e.class) or ""
-        d.sub:SetText(("Level %s %s%s"):format(e.level or "?", cls,
-            rec and rec.ilvl and ("   |cffffd100Item level " .. rec.ilvl .. "|r") or ""))
+        local gold = ""
+        if rec and rec.gold then
+            gold = "   " .. GoldText(rec.gold)
+            if rec.source == "self" and Hidden(rec, "M") then gold = gold .. " |cff888888(not shared)|r" end
+        end
+        d.sub:SetText(("Level %s %s%s%s"):format(e.level or "?", cls,
+            rec and rec.ilvl and ("   |cffffd100Item level " .. rec.ilvl .. "|r") or "", gold))
         if rec then
             local how = rec.source == "self" and "you" or rec.source == "inspect" and "your inspect" or "their Guildie"
-            d.updated:SetText(("|cff888888Updated %s ago, from %s|r"):format(Age(rec.time), how))
+            local note = ""
+            if rec.hidden and rec.hidden:find("[GTP]") then
+                local parts = {}
+                if Hidden(rec, "G") then parts[#parts + 1] = "gear" end
+                if Hidden(rec, "T") then parts[#parts + 1] = "talents" end
+                if Hidden(rec, "P") then parts[#parts + 1] = "professions" end
+                note = rec.source == "self" and ("   |cffff9933You're hiding: " .. table.concat(parts, ", ") .. "|r")
+                    or ("   |cffff9933Hidden: " .. table.concat(parts, ", ") .. "|r")
+            end
+            d.updated:SetText(("|cff888888Updated %s ago, from %s|r%s"):format(Age(rec.time), how, note))
         else
             d.updated:SetText("|cff888888No data yet. It fills in when they run Guildie, or when you inspect them.|r")
         end
@@ -137,6 +161,8 @@ local function ShowDetail(e)
     end
     if not rec then
         d.profs:SetText("")
+    elseif Hidden(rec, "P") and rec.source ~= "self" then
+        d.profs:SetText("|cff888888Professions hidden by this player.|r")
     elseif #profs > 0 then
         d.profs:SetText(table.concat(profs, "    "))
     elseif rec.source == "inspect" then
@@ -156,7 +182,8 @@ local function ShowDetail(e)
             b.text:SetTextColor(QualityColor(quality))
         else
             b.icon:SetTexture(nil)
-            b.text:SetText("|cff555555" .. SLOT_LABEL[b.slot] .. "|r")
+            local label = (Hidden(rec, "G") and rec.source ~= "self") and "Hidden" or SLOT_LABEL[b.slot]
+            b.text:SetText("|cff555555" .. label .. "|r")
         end
     end
 
@@ -175,6 +202,7 @@ local function ShowDetail(e)
         end
     end
     d.talentHeader:SetText(("Talents |cff888888(%d)|r"):format(#talents))
+    d.noTalents:SetText((Hidden(rec, "T") and rec.source ~= "self") and "Talents hidden by this player." or "No talent data.")
     d.noTalents:SetShown(#talents == 0)
 
     d.loadout.value = rec and rec.loadout or ""
@@ -436,6 +464,58 @@ local function Build()
     local share = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     share:SetSize(100, 22)
     share:SetPoint("RIGHT", test, "LEFT", -6, 0)
+
+    -- Privacy: what you volunteer to your guild
+    local priv = CreateFrame("Frame", nil, f, "BackdropTemplate")
+    priv:SetSize(230, 150)
+    priv:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 38)
+    priv:SetFrameLevel(f:GetFrameLevel() + 20)
+    if priv.SetBackdrop then
+        priv:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+        priv:SetBackdropColor(0.05, 0.05, 0.07, 0.97)
+        priv:SetBackdropBorderColor(1, 0.82, 0, 0.5)
+    end
+    priv:EnableMouse(true)
+    priv:Hide()
+    local ph = Label(priv, "GameFontNormal", "Share with my guild")
+    ph:SetPoint("TOPLEFT", 10, -10)
+    local opts = {
+        { "shareGear", "Gear and item level" },
+        { "shareTalents", "Talents and loadout" },
+        { "shareProfessions", "Professions" },
+        { "shareGold", "Gold on hand" },
+    }
+    priv.checks = {}
+    for i, o in ipairs(opts) do
+        local cb = CreateFrame("CheckButton", nil, priv, "UICheckButtonTemplate")
+        cb:SetSize(24, 24)
+        cb:SetPoint("TOPLEFT", 8, -28 - (i - 1) * 26)
+        if cb.text then cb.text:SetText("") end
+        if cb.Text then cb.Text:SetText("") end
+        local l = Label(cb, "GameFontHighlight", o[2])
+        l:SetPoint("LEFT", cb, "RIGHT", 4, 1)
+        cb:SetHitRectInsets(0, -(l:GetStringWidth() + 8), 0, 0)
+        cb.key = o[1]
+        cb:SetScript("OnClick", function(self)
+            ns.db[self.key] = self:GetChecked() and true or false
+            -- re-share now so guildmates' copies reflect the change (hidden data gets cleared)
+            A.Broadcast(true)
+            RefreshList()
+        end)
+        priv.checks[#priv.checks + 1] = cb
+    end
+    priv:SetScript("OnShow", function(self)
+        for _, cb in ipairs(self.checks) do
+            if cb.key == "shareGold" then cb:SetChecked(ns.db[cb.key] == true)
+            else cb:SetChecked(ns.db[cb.key] ~= false) end
+        end
+    end)
+    local privBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    privBtn:SetSize(90, 22)
+    privBtn:SetPoint("RIGHT", share, "LEFT", -6, 0)
+    privBtn:SetText("Privacy")
+    privBtn:SetScript("OnClick", function() priv:SetShown(not priv:IsShown()) end)
+    f:HookScript("OnHide", function() priv:Hide() end)
     share:SetText("Share Mine")
     share:SetScript("OnClick", function() A.Broadcast(true) ns.Print("Shared your gear and talents with the guild.") end)
 

@@ -16,6 +16,11 @@ ns.DEFAULTS = {
     welcomeOnlyMine = true,   -- only welcome players Guildie invited (stops double welcomes between officers)
     welcomeDelay   = 3,
     debug          = false,   -- /guildie debug: print why each whisper was or wasn't acted on
+    -- Armory: what you share with guildmates
+    shareGear        = true,
+    shareTalents     = true,
+    shareProfessions = true,
+    shareGold        = false,  -- opt-in
     -- Minimap button
     minimapShow    = true,
     minimapAngle   = 200,
