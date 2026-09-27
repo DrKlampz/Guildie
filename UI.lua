@@ -158,9 +158,12 @@ local function Build()
     y = -32
 
     -- Guild status line
+    local armory = Button("Armory", 80, function() ns.ToggleArmory() end)
+    armory:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, y + 4)
+    Tooltip(armory, "Guild Armory", "See your guildmates' gear and talent builds.")
     frame.status = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     frame.status:SetPoint("TOPLEFT", PAD, y)
-    frame.status:SetPoint("RIGHT", frame, "RIGHT", -PAD, 0)
+    frame.status:SetPoint("RIGHT", armory, "LEFT", -6, 0)
     frame.status:SetJustifyH("LEFT")
     y = y - 16
 

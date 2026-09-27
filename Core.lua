@@ -364,14 +364,11 @@ end
 -- Events
 ---------------------------------------------------------------------------
 local f = CreateFrame("Frame")
-f:RegisterEvent("ADDON_LOADED")
-f:RegisterEvent("PLAYER_LOGIN")
-f:RegisterEvent("CHAT_MSG_WHISPER")
-f:RegisterEvent("CHAT_MSG_SYSTEM")
-f:RegisterEvent("ADDON_ACTION_BLOCKED")
-f:RegisterEvent("ADDON_ACTION_FORBIDDEN")
-f:RegisterEvent("PLAYER_GUILD_UPDATE")
-f:RegisterEvent("GUILD_ROSTER_UPDATE")
+-- An event this client doesn't have RAISES and would abort the file, so guard each one
+for _, ev in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "CHAT_MSG_WHISPER", "CHAT_MSG_SYSTEM",
+    "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN", "PLAYER_GUILD_UPDATE", "GUILD_ROSTER_UPDATE" }) do
+    pcall(f.RegisterEvent, f, ev)
+end
 
 f:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
@@ -434,6 +431,10 @@ SlashCmdList.GUILDIE = function(input)
     elseif cmd == "welcome" and rest ~= "" then
         db.welcomeText = rest
         ns.Print("Welcome message set to: " .. rest)
+    elseif cmd == "armory" or cmd == "a" then
+        ns.ToggleArmory()
+    elseif cmd == "synctest" then
+        ns.Armory.SyncTest()
     elseif cmd == "debug" then
         db.debug = not db.debug
         ns.Print("Debug " .. (db.debug and "|cff55ff55on|r: every whisper will be explained in chat." or "|cffff5555off|r"))
@@ -441,6 +442,8 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("Preview: " .. ns.Fill(db.welcomeText, UnitName("player")))
     else
         ns.Print("/guildie - open settings")
+        ns.Print("/guildie armory - open the guild armory")
+        ns.Print("/guildie synctest - check whether guild sync works on this client")
         ns.Print("/guildie on | off - toggle auto-invite")
         ns.Print("/guildie phrase <text> - set the whisper phrase")
         ns.Print("/guildie welcome <text> - set the welcome message ({name}, {guild})")
