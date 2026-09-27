@@ -2,11 +2,11 @@
 local ADDON_NAME, ns = ...
 local A = ns.Armory
 
-local W, H = 780, 570
-local LIST_W = 250
+local W, H = 1010, 570
+local LIST_W = 480
 local ROWS, ROW_H = 22, 18
 local frame, rows, slotButtons, talentButtons = nil, {}, {}, {}
-local entries, offset, selected, sortBy = {}, 0, nil, "ilvl"
+local entries, offset, selected, sortBy, sortAsc = {}, 0, nil, "ilvl", false
 
 local SLOT_LABEL = {
     [1] = "Head", [2] = "Neck", [3] = "Shoulder", [15] = "Back", [5] = "Chest", [9] = "Wrist",
@@ -66,6 +66,41 @@ local function GoldText(copper)
     return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
 end
 
+local function Commas(n)
+    local s = tostring(math.floor(n))
+    while true do
+        local r, k = s:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+        s = r
+        if k == 0 then return s end
+    end
+end
+
+local function GoldShort(copper)
+    if copper >= 10000 then return "|cffffd700" .. Commas(copper / 10000) .. "g|r" end
+    if copper >= 100 then return "|cffc7c7cf" .. math.floor(copper / 100) .. "s|r" end
+    return "|cffeda55f" .. copper .. "c|r"
+end
+
+local function ClassName(file)
+    if not file then return "" end
+    return (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[file]) or file:sub(1, 1) .. file:sub(2):lower()
+end
+
+local function SeenText(e)
+    if e.gone then return "|cff666666left|r" end
+    if e.online then return "|cff55ff55Online|r" end
+    local h = e.lastOnline
+    if not h then return "|cff555555-|r" end
+    if h < 1 then return "|cff888888<1h|r" end
+    if h < 24 then return "|cff888888" .. math.floor(h) .. "h|r" end
+    if h < 24 * 30 then return "|cff888888" .. math.floor(h / 24) .. "d|r" end
+    return "|cff666666" .. math.floor(h / (24 * 30)) .. "mo|r"
+end
+
+local function ShownGold(rec)
+    return rec and rec.gold and (rec.source == "self" or not Hidden(rec, "M")) and rec.gold or nil
+end
+
 local InsertLink = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_InsertLink
 
 ---------------------------------------------------------------------------
@@ -82,10 +117,17 @@ local function BuildEntries()
                 local k = A.Key(name)
                 seen[k] = true
                 local rec = data[k]
+                local lastOnline
+                if not online and GetGuildRosterLastOnline then
+                    local ok, y, mo, d, h = pcall(GetGuildRosterLastOnline, i)
+                    if ok and (y or mo or d or h) then
+                        lastOnline = (((y or 0) * 12 + (mo or 0)) * 30 + (d or 0)) * 24 + (h or 0)
+                    end
+                end
                 entries[#entries + 1] = {
                     key = k, name = Ambiguate and Ambiguate(name, "short") or name,
                     class = (rec and rec.class) or classFile, level = level or (rec and rec.level),
-                    online = online, rec = rec,
+                    online = online and true or false, lastOnline = lastOnline, rec = rec,
                 }
             end
         end
@@ -101,10 +143,24 @@ local function BuildEntries()
             if not entries[i].name:lower():find(q, 1, true) then table.remove(entries, i) end
         end
     end
+    -- Column sort. Missing values (no data, gold not shared) always sink to the bottom.
+    local function val(e)
+        if sortBy == "name" then return e.name:lower()
+        elseif sortBy == "class" then return ClassName(e.class):lower()
+        elseif sortBy == "level" then return e.level
+        elseif sortBy == "ilvl" then return e.rec and e.rec.ilvl
+        elseif sortBy == "gold" then return ShownGold(e.rec)
+        elseif sortBy == "seen" then
+            if e.gone then return nil end
+            return e.online and -1 or e.lastOnline   -- smaller = more recently online
+        end
+    end
     table.sort(entries, function(a, b)
-        if (a.rec ~= nil) ~= (b.rec ~= nil) then return a.rec ~= nil end
-        if sortBy == "ilvl" and a.rec and b.rec and (a.rec.ilvl or 0) ~= (b.rec.ilvl or 0) then
-            return (a.rec.ilvl or 0) > (b.rec.ilvl or 0)
+        local va, vb = val(a), val(b)
+        if va ~= vb then
+            if va == nil then return false end
+            if vb == nil then return true end
+            if sortAsc then return va < vb else return va > vb end
         end
         return a.name < b.name
     end)
@@ -130,7 +186,7 @@ local function ShowDetail(e)
             if rec.source == "self" and Hidden(rec, "M") then gold = gold .. " |cff888888(not shared)|r" end
         end
         d.sub:SetText(("Level %s %s%s%s"):format(e.level or "?", cls,
-            rec and rec.ilvl and ("   |cffffd100Item level " .. rec.ilvl .. "|r") or "", gold))
+            (rec and rec.ilvl and rec.ilvl > 0) and ("   |cffffd100Item level " .. rec.ilvl .. "|r") or "", gold))
         if rec then
             local how = rec.source == "self" and "you" or rec.source == "inspect" and "your inspect" or "their Guildie"
             local note = ""
@@ -223,10 +279,14 @@ local function RefreshList()
         row.entry = e
         if e then
             local hex = ClassHex(e.class)
-            row.name:SetText((e.rec and "|c" .. hex or "|cff777777") .. e.name .. "|r" .. (e.gone and " |cff666666(left)|r" or ""))
+            row.name:SetText((e.rec and "|c" .. hex or "|cff777777") .. e.name .. "|r")
+            row.class:SetText("|c" .. hex .. ClassName(e.class) .. "|r")
             row.level:SetText(e.level or "")
-            row.ilvl:SetText(e.rec and e.rec.ilvl and ("|cffffd100" .. e.rec.ilvl .. "|r") or "|cff555555-|r")
-            row.age:SetText(e.rec and ("|cff888888" .. Age(e.rec.time) .. "|r") or "")
+            local il = e.rec and e.rec.ilvl
+            row.ilvl:SetText((il and il > 0) and ("|cffffd100" .. il .. "|r") or "|cff555555-|r")
+            local g = ShownGold(e.rec)
+            row.gold:SetText(g and GoldShort(g) or "|cff555555-|r")
+            row.seen:SetText(SeenText(e))
             row.sel:SetShown(e.key == selected)
             row:Show()
         else
@@ -291,7 +351,7 @@ local function Build()
 
     -- Search + sort
     local search = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-    search:SetSize(LIST_W - 70, 20)
+    search:SetSize(LIST_W - 16, 20)
     search:SetPoint("TOPLEFT", 20, -32)
     search:SetAutoFocus(false)
     search:SetScript("OnTextChanged", function() offset = 0 RefreshList() end)
@@ -301,16 +361,60 @@ local function Build()
     search:HookScript("OnTextChanged", function(self) hint:SetShown(self:GetText() == "") end)
     f.search = search
 
-    local sort = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    sort:SetSize(60, 20)
-    sort:SetPoint("LEFT", search, "RIGHT", 6, 0)
-    local function SortText() sort:SetText(sortBy == "ilvl" and "iLvl" or "Name") end
-    SortText()
-    sort:SetScript("OnClick", function() sortBy = (sortBy == "ilvl") and "name" or "ilvl" SortText() RefreshList() end)
+    -- Column layout: key, header, x, width, justify, default direction (true = ascending)
+    local COLS = {
+        { "name",  "Name",  6,   150, "LEFT",  true  },
+        { "class", "Class", 160, 76,  "LEFT",  true  },
+        { "level", "Lvl",   238, 30,  "RIGHT", false },
+        { "ilvl",  "iLvl",  272, 40,  "RIGHT", false },
+        { "gold",  "Gold",  316, 88,  "RIGHT", false },
+        { "seen",  "Seen",  408, 66,  "RIGHT", true  },
+    }
+    local ARROW_DOWN = "|TInterface\\Buttons\\Arrow-Down-Up:12:12:0:-2|t"
+    local ARROW_UP = "|TInterface\\Buttons\\Arrow-Up-Up:12:12:0:2|t"
+    local header = CreateFrame("Frame", nil, f)
+    header:SetPoint("TOPLEFT", 14, -58)
+    header:SetSize(LIST_W, 18)
+    local hbg = header:CreateTexture(nil, "BACKGROUND")
+    hbg:SetAllPoints()
+    hbg:SetColorTexture(1, 0.82, 0, 0.08)
+    local headButtons = {}
+    local function UpdateHeaders()
+        for _, hb in ipairs(headButtons) do
+            local active = hb.key == sortBy
+            local arrow = active and (sortAsc and ARROW_UP or ARROW_DOWN) or ""
+            hb.label:SetText((active and "|cffffd100" or "|cffaaaaaa") .. hb.title .. "|r" .. arrow)
+        end
+    end
+    for _, c in ipairs(COLS) do
+        local hb = CreateFrame("Button", nil, header)
+        hb:SetPoint("LEFT", c[3], 0)
+        hb:SetSize(c[4], 18)
+        hb.key, hb.title, hb.defaultAsc = c[1], c[2], c[6]
+        hb.label = Label(hb, "GameFontNormalSmall")
+        hb.label:SetPoint(c[5])
+        hb.label:SetJustifyH(c[5])
+        hb:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
+        hb:SetScript("OnClick", function(self)
+            if sortBy == self.key then sortAsc = not sortAsc else sortBy, sortAsc = self.key, self.defaultAsc end
+            offset = 0
+            UpdateHeaders()
+            RefreshList()
+        end)
+        hb:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText("Sort by " .. self.title:lower(), 1, 1, 1)
+            GameTooltip:AddLine("Click again to reverse.", 0.8, 0.8, 0.8)
+            GameTooltip:Show()
+        end)
+        hb:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        headButtons[#headButtons + 1] = hb
+    end
+    UpdateHeaders()
 
     -- List rows
     local list = CreateFrame("Frame", nil, f)
-    list:SetPoint("TOPLEFT", 14, -60)
+    list:SetPoint("TOPLEFT", 14, -78)
     list:SetSize(LIST_W, ROWS * ROW_H)
     list:EnableMouseWheel(true)
     list:SetScript("OnMouseWheel", function(_, delta)
@@ -325,16 +429,14 @@ local function Build()
         r.sel = r:CreateTexture(nil, "BACKGROUND")
         r.sel:SetAllPoints()
         r.sel:SetColorTexture(1, 0.82, 0, 0.15)
-        r.name = Label(r, "GameFontHighlightSmall")
-        r.name:SetPoint("LEFT", 6, 0)
-        r.name:SetWidth(130)
-        r.name:SetJustifyH("LEFT")
-        r.level = Label(r, "GameFontHighlightSmall")
-        r.level:SetPoint("LEFT", 140, 0)
-        r.ilvl = Label(r, "GameFontHighlightSmall")
-        r.ilvl:SetPoint("LEFT", 172, 0)
-        r.age = Label(r, "GameFontHighlightSmall")
-        r.age:SetPoint("RIGHT", -4, 0)
+        for _, c in ipairs(COLS) do
+            local fs = Label(r, "GameFontHighlightSmall")
+            fs:SetPoint("LEFT", c[3], 0)
+            fs:SetWidth(c[4])
+            fs:SetJustifyH(c[5])
+            fs:SetWordWrap(false)
+            r[c[1]] = fs
+        end
         r:SetScript("OnClick", function(self)
             if self.entry then ShowDetail(self.entry) RefreshList() end
         end)

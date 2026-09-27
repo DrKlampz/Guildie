@@ -83,6 +83,13 @@ local function Key(name)
     return ShortName(name):lower()
 end
 
+-- Whether this client has shown that guild invites need a real click. Remembered per client
+-- build, so a Forever patch that loosens the rule gets re-tested automatically.
+local function ClientBuild() return tostring((select(2, GetBuildInfo()))) end
+function ns.InviteNeedsClick()
+    return ns.db and ns.db.inviteNeedsClick ~= nil and ns.db.inviteNeedsClick == ClientBuild()
+end
+
 function ns.Fill(template, name)
     local guild = GetGuildInfo("player") or "the guild"
     local short = ShortName(name)
@@ -290,8 +297,9 @@ OnWhisper = function(msg, sender, lineID)
     end
     lastSeen[k] = now
 
-    if db.confirm then
-        ns.Debug("  -> matched, showing confirm popup")
+    if db.confirm or ns.InviteNeedsClick() then
+        ns.Debug(db.confirm and "  -> matched, showing confirm popup"
+            or "  -> matched; this client needs a click to invite, showing popup")
         StaticPopup_Show("GUILDIE_CONFIRM", ShortName(sender), nil, sender)
     else
         ns.Debug("  -> matched, inviting")
@@ -457,6 +465,12 @@ local function LoadDB()
         src = {}
     end
     ApplyDefaults(src)
+    -- 1.4.x turned "Ask me before each invite" on by itself; give the player their setting back
+    if src.confirmAuto then
+        src.confirm = false
+        src.confirmAuto = nil
+        src.inviteNeedsClick = ClientBuild()
+    end
     GuildieDB, GuildieCharDB = src, src
     db, ns.db = src, src
 end
@@ -511,10 +525,9 @@ f:SetScript("OnEvent", function(_, event, ...)
         func = tostring(func or "")
         if func:find("Invite") then
             ns.blockedAt = GetTime()
-            if not db.confirm then
-                db.confirm = true
-                db.confirmAuto = true
-                ns.Print("The game requires a click to send guild invites. Switched to confirm mode: you'll get a popup to click.")
+            if not ns.InviteNeedsClick() then
+                db.inviteNeedsClick = ClientBuild()
+                ns.Print("Forever requires a click to send guild invites, so Guildie will show a popup for each one. Your settings are unchanged.")
             end
         elseif func:find("SendChatMessage") then
             ns.chatNeedsClick = true

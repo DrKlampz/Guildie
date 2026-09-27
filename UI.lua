@@ -177,7 +177,7 @@ local function Build()
         "Off: the whisper must be exactly the phrase.\nOn: \"hey can I get a guild inv pls\" also counts.",
         24, "enabled")
     Check("confirm", "Ask me before each invite (popup)",
-        "Shows a popup you click to send the invite. Guildie turns this on by itself if the game blocks automatic invites.",
+        "Shows a popup you click to send each invite.\n\nOn WoW Forever the game itself requires a click to send guild invites, so you'll get the popup either way. Guildie never changes this setting for you.",
         24, "enabled")
     Edit("cooldown", "Cooldown per player (seconds)", 60,
         "Stops one player from spamming the phrase.", true, 24, "enabled")
@@ -267,7 +267,7 @@ function ns.RefreshUI()
         frame.status:SetText("|cffff5555You're not in a guild.|r")
     elseif CanGuildInvite() then
         frame.status:SetText("Guild: |cffffd100" .. guild .. "|r   |cff55ff55Your rank can invite.|r"
-            .. (db.confirmAuto and "  |cffffaa00(Forever needs a click per invite)|r" or ""))
+            .. (ns.InviteNeedsClick() and "  |cffffaa00(Forever needs a click per invite)|r" or ""))
     else
         frame.status:SetText("Guild: |cffffd100" .. guild .. "|r   |cffff5555Your rank can't invite.|r")
     end

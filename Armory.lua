@@ -183,7 +183,7 @@ function A.CollectSelf()
     return {
         class   = ClassFile("player"),
         level   = UnitLevel("player"),
-        ilvl    = equipped and math.floor(equipped * 10 + 0.5) / 10 or nil,
+        ilvl    = (equipped and equipped > 0) and math.floor(equipped * 10 + 0.5) / 10 or nil,
         time    = Now(),
         loadout = loadout,
         talents = talents,
