@@ -136,7 +136,7 @@ local function CreateShell()
         title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         title:SetPoint("TOP", 0, -5)
     end
-    title:SetText("|cff33ff99Guildie|r  |cff888888v" .. ns.VERSION .. "|r")
+    title:SetText("|cff33ff99Guildie|r  |cff888888v" .. tostring(ns.VERSION):gsub("^v", "") .. "|r")
 
     f:SetWidth(WIDTH)
     f:SetPoint("CENTER")
