@@ -2,7 +2,7 @@
 local ADDON_NAME, ns = ...
 local A = ns.Armory
 
-local W, H = 780, 540
+local W, H = 780, 570
 local LIST_W = 250
 local ROWS, ROW_H = 22, 18
 local frame, rows, slotButtons, talentButtons = nil, {}, {}, {}
@@ -125,6 +125,26 @@ local function ShowDetail(e)
     end
 
     local rec = e and e.rec
+    local profs = {}
+    for _, p in ipairs(rec and rec.professions or {}) do
+        local name, rank, max, icon = p:match("^([^:]+):(%d+):(%d+):(%d+)$")
+        if name then
+            icon = tonumber(icon)
+            local color = (tonumber(rank) >= tonumber(max) and tonumber(max) > 0) and "|cff55ff55" or "|cffffd100"
+            profs[#profs + 1] = ((icon and icon > 0) and ("|T" .. icon .. ":14:14:0:0|t ") or "")
+                .. name .. " " .. color .. rank .. "/" .. max .. "|r"
+        end
+    end
+    if not rec then
+        d.profs:SetText("")
+    elseif #profs > 0 then
+        d.profs:SetText(table.concat(profs, "    "))
+    elseif rec.source == "inspect" then
+        d.profs:SetText("|cff888888Professions aren't visible by inspecting. They show once this player runs Guildie.|r")
+    else
+        d.profs:SetText("|cff888888No professions.|r")
+    end
+
     for _, b in ipairs(slotButtons) do
         local str = rec and rec.items and rec.items[b.slot]
         b.str = str
@@ -313,6 +333,10 @@ local function Build()
     d.sub:SetPoint("TOPLEFT", d.title, "BOTTOMLEFT", 0, -4)
     d.updated = Label(d, "GameFontHighlightSmall")
     d.updated:SetPoint("TOPLEFT", d.sub, "BOTTOMLEFT", 0, -3)
+    d.profs = Label(d, "GameFontHighlightSmall")
+    d.profs:SetPoint("TOPLEFT", d.updated, "BOTTOMLEFT", 0, -6)
+    d.profs:SetPoint("RIGHT", d, "RIGHT", 0, 0)
+    d.profs:SetJustifyH("LEFT")
 
     -- Gear: two columns
     local colW = 235
@@ -321,7 +345,7 @@ local function Build()
         local row = (i <= 9) and (i - 1) or (i - 10)
         local b = CreateFrame("Button", nil, d)
         b:SetSize(colW, 26)
-        b:SetPoint("TOPLEFT", col * (colW + 8), -58 - row * 28)
+        b:SetPoint("TOPLEFT", col * (colW + 8), -80 - row * 28)
         b.slot = slot
         b.icon = b:CreateTexture(nil, "ARTWORK")
         b.icon:SetSize(24, 24)
@@ -354,7 +378,7 @@ local function Build()
 
     -- Talents
     d.talentHeader = Label(d, "GameFontNormal")
-    d.talentHeader:SetPoint("TOPLEFT", 0, -58 - 9 * 28 - 6)
+    d.talentHeader:SetPoint("TOPLEFT", 0, -80 - 9 * 28 - 6)
     d.noTalents = Label(d, "GameFontDisableSmall", "No talent data.")
     d.noTalents:SetPoint("TOPLEFT", d.talentHeader, "BOTTOMLEFT", 0, -6)
     local perRow, size = 17, 26

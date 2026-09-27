@@ -108,6 +108,69 @@ local function CollectTalents(configID)
     return list, loadout
 end
 
+-- Professions. Forever ships both the retail profession API and the classic skill list,
+-- so read both: GetProfessions() first, then C_SkillInfo by skill line category
+-- (11 = professions, 9 = secondary skills), which is locale-independent.
+local PROFESSION_IDS = { 164, 165, 171, 182, 186, 197, 202, 333, 393, 755, 773, 129, 185, 356 }
+local PROF_CATEGORIES = { [11] = true, [9] = true }
+
+local function Clean(s) return (tostring(s):gsub("[~;,:%^|]", "")) end
+
+local function CollectProfessions()
+    local out, seen = {}, {}
+    local function add(name, rank, max, icon)
+        if not name or IsSecret(name) or IsSecret(rank) or IsSecret(max) then return end
+        rank, max = tonumber(rank) or 0, tonumber(max) or 0
+        if rank <= 0 or seen[name] then return end
+        seen[name] = true
+        if IsSecret(icon) or type(icon) ~= "number" then icon = 0 end
+        out[#out + 1] = Clean(name) .. ":" .. rank .. ":" .. max .. ":" .. icon
+    end
+
+    if GetProfessions and GetProfessionInfo then
+        local ok, p1, p2, arch, fish, cook = pcall(GetProfessions)
+        if ok then
+            local list = { p1, p2, cook, fish, arch }
+            for i = 1, 5 do
+                local idx = list[i]
+                if idx and not IsSecret(idx) then
+                    local ok2, name, icon, rank, max = pcall(GetProfessionInfo, idx)
+                    if ok2 then add(name, rank, max, icon) end
+                end
+            end
+        end
+    end
+
+    if C_SkillInfo then
+        local function iconFor(skillID)
+            if C_TradeSkillUI and C_TradeSkillUI.GetTradeSkillTexture then
+                local ok, tex = pcall(C_TradeSkillUI.GetTradeSkillTexture, skillID)
+                if ok then return tex end
+            end
+        end
+        if C_SkillInfo.GetSkillLineInfoByID then          -- known IDs: works even under collapsed headers
+            for _, id in ipairs(PROFESSION_IDS) do
+                local ok, info = pcall(C_SkillInfo.GetSkillLineInfoByID, id)
+                if ok and type(info) == "table" and not info.isHeader then
+                    add(info.name, info.rank, info.maxRank, iconFor(id))
+                end
+            end
+        end
+        if C_SkillInfo.GetNumSkillLines and C_SkillInfo.GetSkillLineInfo then   -- anything new on Forever
+            local okn, n = pcall(C_SkillInfo.GetNumSkillLines)
+            for i = 1, (okn and tonumber(n) or 0) do
+                local ok, info = pcall(C_SkillInfo.GetSkillLineInfo, i)
+                if ok and type(info) == "table" and not info.isHeader
+                    and PROF_CATEGORIES[info.skillLineCategoryID] then
+                    add(info.name, info.rank, info.maxRank, iconFor(info.skillID))
+                end
+            end
+        end
+    end
+    return out
+end
+A.CollectProfessions = CollectProfessions
+
 local function ClassFile(unit)
     local ok, _, file = pcall(UnitClass, unit)
     if ok and file and not IsSecret(file) then return file end
@@ -125,6 +188,7 @@ function A.CollectSelf()
         loadout = loadout,
         talents = talents,
         items   = CollectItems("player"),
+        professions = CollectProfessions(),
         source  = "self",
     }
 end
@@ -140,6 +204,7 @@ local function Serialize(r)
     return table.concat({
         PROTO, r.class or "", r.level or 0, r.ilvl and math.floor(r.ilvl * 10) or 0, r.time or 0,
         r.loadout or "", table.concat(r.talents or {}, ","), table.concat(items, ";"),
+        table.concat(r.professions or {}, ","),
     }, "~")
 end
 
@@ -157,6 +222,8 @@ local function Deserialize(s)
     }
     for t in f[7]:gmatch("[^,]+") do r.talents[#r.talents + 1] = t end
     for slot, str in f[8]:gmatch("(%d+)=([^;]+)") do r.items[tonumber(slot)] = str end
+    r.professions = {}
+    for p in (f[9] or ""):gmatch("[^,]+") do r.professions[#r.professions + 1] = p end
     return r
 end
 A.Serialize, A.Deserialize = Serialize, Deserialize
@@ -238,7 +305,9 @@ local pendingBroadcast = false
 function A.ScheduleBroadcast(delay)
     if pendingBroadcast then return end
     pendingBroadcast = true
-    C_Timer.After(delay or 5, function()
+    -- automatic updates at most once a minute (skill-ups while crafting fire constantly)
+    delay = math.max(delay or 5, 60 - (GetTime() - lastBroadcast))
+    C_Timer.After(delay, function()
         pendingBroadcast = false
         A.Broadcast(false)
     end)
@@ -379,6 +448,7 @@ Reg("CHAT_MSG_ADDON")
 Reg("INSPECT_READY")
 Reg("GUILD_ROSTER_UPDATE")
 Reg("PLAYER_GUILD_UPDATE")
+Reg("SKILL_LINES_CHANGED")
 
 -- Login sync. Right after login the client often hasn't loaded the guild yet: IsInGuild()
 -- is false and the roster is empty, so a fixed timer can fire too early and the share is
