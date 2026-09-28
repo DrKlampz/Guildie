@@ -16,3 +16,4 @@ Armory.lua
 UI.lua
 ArmoryUI.lua
 Minimap.lua
+GamerWords.lua

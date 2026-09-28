@@ -297,6 +297,15 @@ local function RefreshList()
     for _, e in ipairs(entries) do if e.rec then withData = withData + 1 end end
     frame.count:SetText(("%d members, %d with data"):format(#entries, withData))
 
+    if frame.gw then
+        local G = ns.GamerWords
+        if G and G.Enabled() then
+            frame.gw.text:SetText("|cffff8844Gamer words:|r |cffffffff" .. Commas(G.Total()) .. "|r")
+        else
+            frame.gw.text:SetText("|cff777777Gamer words: off|r")
+        end
+    end
+
     local s = A.stats
     frame.sync:SetText(("Sync: sent %d, |cff55ff55ok %d|r, |cffff5555failed %d|r   last result: |cffffd100%s|r   received: %d"):format(
         s.sent, s.ok, s.failed, s.lastResult, s.received))
@@ -351,7 +360,7 @@ local function Build()
 
     -- Search + sort
     local search = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-    search:SetSize(LIST_W - 16, 20)
+    search:SetSize(LIST_W - 16 - 152, 20)
     search:SetPoint("TOPLEFT", 20, -32)
     search:SetAutoFocus(false)
     search:SetScript("OnTextChanged", function() offset = 0 RefreshList() end)
@@ -360,6 +369,29 @@ local function Build()
     hint:SetPoint("LEFT", 4, 0)
     search:HookScript("OnTextChanged", function(self) hint:SetShown(self:GetText() == "") end)
     f.search = search
+
+    -- Gamer word counter, to the right of the search bar
+    local gw = CreateFrame("Frame", nil, f)
+    gw:SetSize(146, 20)
+    gw:SetPoint("LEFT", search, "RIGHT", 6, 0)
+    gw:EnableMouse(true)
+    gw.text = Label(gw, "GameFontNormalSmall")
+    gw.text:SetPoint("RIGHT", 0, 0)
+    gw.text:SetJustifyH("RIGHT")
+    gw:SetScript("OnEnter", function(self)
+        local G = ns.GamerWords
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Gamer words", 1, 1, 1)
+        GameTooltip:AddLine("Profanity and slurs seen in guild chat while you're online.", 0.85, 0.85, 0.85, true)
+        if G then
+            GameTooltip:AddLine(("This session: %s     Total: %s"):format(Commas(G.session), Commas(G.Total())), 1, 0.82, 0)
+        end
+        GameTooltip:AddLine("Only a number is kept: never which word, and never who said it. Nothing is shared with other players.", 0.6, 0.6, 0.6, true)
+        GameTooltip:AddLine("Turn it off in Guildie settings. /guildie words reset starts over.", 0.6, 0.6, 0.6, true)
+        GameTooltip:Show()
+    end)
+    gw:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    f.gw = gw
 
     -- Column layout: key, header, x, width, justify, default direction (true = ascending)
     local COLS = {

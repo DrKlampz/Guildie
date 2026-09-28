@@ -24,6 +24,9 @@ ns.DEFAULTS = {
     -- Minimap button
     minimapShow    = true,
     minimapAngle   = 200,
+    -- Gamer word counter (shown in the Armory). Only ever a number.
+    gamerCounter   = true,
+    gamerWords     = 0,
     -- Stats
     stats          = { invited = 0, welcomed = 0 },
 }
@@ -360,18 +363,26 @@ local function Welcome(who, source)
     local mine = ns.invitedByMe[k] and (GetTime() - ns.invitedByMe[k] < 1800)
     ns.Debug(("join detected via %s: %s (invited by Guildie: %s)"):format(source, who, tostring(mine and true or false)))
 
-    if not db.welcomeEnabled or Trim(db.welcomeText) == "" then return end
+    if not db.welcomeEnabled or Trim(db.welcomeText) == "" then
+        ns.Log(who, "|cff888888Joined (welcome message is off)|r")
+        return
+    end
     if db.welcomeOnlyMine and not mine then
         ns.Log(who, "|cff888888Joined (not a Guildie invite, no welcome)|r")
         return
     end
     welcomed[k] = GetTime()
     ns.invitedByMe[k] = nil
+    ns.Log(who, "|cffaaaaaaJoined the guild|r")
 
     C_Timer.After(tonumber(db.welcomeDelay) or 3, function()
         local text = ns.Fill(db.welcomeText, who)
         local function needClick()
-            ns.Log(who, "|cffffaa00Joined: welcome waiting for your click|r")
+            ns.Log(who, "|cffffaa00Welcome waiting for your click|r")
+            if not ns.toldNeedsClick then
+                ns.toldNeedsClick = true
+                ns.Print("The game didn't post the welcome by itself, so it's waiting for your click on the popup at the top of your screen.")
+            end
             if ns.ShowSendToast then
                 ns.ShowSendToast("Welcome " .. ShortName(who) .. " to the guild?", text, "GUILD", nil, function()
                     db.stats.welcomed = db.stats.welcomed + 1
@@ -385,6 +396,29 @@ local function Welcome(who, source)
             if not ns.chatNeedsClick then
                 db.stats.welcomed = db.stats.welcomed + 1
                 ns.Log(who, "|cff66ccffJoined + welcomed|r")
+            end
+        end)
+    end)
+end
+
+-- /guildie testwelcome: finds out whether this client lets Guildie post to guild chat by itself.
+-- It runs on a timer, not inside the slash command (a typed command counts as a keypress and
+-- would always be allowed), so it behaves exactly like a real join.
+function ns.TestWelcome()
+    if not IsInGuild() then ns.Print("You're not in a guild.") return end
+    ns.Print("Welcome test: one test line will post in guild chat in 2 seconds.")
+    C_Timer.After(2, function()
+        local text = "[Guildie test] Checking that welcome messages can post. Ignore me!"
+        ns.chatNeedsClick = false
+        local failed = false
+        ns.Say(text, "GUILD", nil, function()
+            failed = true
+            ns.Print("|cffffaa00Result: the game did NOT let Guildie post by itself.|r Welcomes will wait for one click on a popup at the top of your screen.")
+            if ns.ShowSendToast then ns.ShowSendToast("Welcome test", text, "GUILD") end
+        end)
+        C_Timer.After(5, function()
+            if not failed then
+                ns.Print("|cff55ff55Result: the test line posted by itself.|r Automatic welcomes work on this client.")
             end
         end)
     end)
@@ -423,8 +457,16 @@ local function OnRoster()
     local current = ReadRoster()
     if not current then return end
     if roster then
+        local new = {}
         for k, name in pairs(current) do
-            if not roster[k] then Welcome(name, "roster") end
+            if not roster[k] then new[#new + 1] = name end
+        end
+        -- A real join adds one or two names. A big jump means the roster was still loading in
+        -- pieces, and those are not new members.
+        if #new > 0 and #new <= 3 then
+            for _, name in ipairs(new) do Welcome(name, "roster") end
+        elseif #new > 3 then
+            ns.Debug(("roster grew by %d at once: treating it as a reload, not joins"):format(#new))
         end
     end
     roster = current
@@ -573,6 +615,16 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("Minimap button " .. (db.minimapShow and "shown." or "hidden. Type /guildie minimap to bring it back."))
     elseif cmd == "synctest" then
         ns.Armory.SyncTest()
+    elseif cmd == "testwelcome" then
+        ns.TestWelcome()
+    elseif cmd == "words" then
+        local G = ns.GamerWords
+        if rest:lower() == "reset" then
+            G.Reset()
+            ns.Print("Gamer word counter reset to 0.")
+        else
+            ns.Print(("Gamer words counted: |cffffd100%d|r (this session: %d)"):format(G.Total(), G.session))
+        end
     elseif cmd == "debug" then
         db.debug = not db.debug
         ns.Print("Debug " .. (db.debug and "|cff55ff55on|r: every whisper will be explained in chat." or "|cffff5555off|r"))
@@ -583,6 +635,8 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("/guildie armory - open the guild armory")
         ns.Print("/guildie synctest - check whether guild sync works on this client")
         ns.Print("/guildie minimap - show or hide the minimap button")
+        ns.Print("/guildie testwelcome - check whether welcomes can post to guild chat by themselves")
+        ns.Print("/guildie words [reset] - show or reset the gamer word counter")
         ns.Print("/guildie on | off - toggle auto-invite")
         ns.Print("/guildie phrase <text> - set the whisper phrase")
         ns.Print("/guildie welcome <text> - set the welcome message ({name}, {guild})")
