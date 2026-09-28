@@ -24,6 +24,15 @@ ns.DEFAULTS = {
     -- Minimap button
     minimapShow    = true,
     minimapAngle   = 200,
+    -- Recruit welcome kit: up to three whispers sent to new recruits
+    kitEnabled     = false,
+    kit1           = "",
+    kit2           = "",
+    kit3           = "",
+    -- Armory views and sharing
+    groupAlts      = true,    -- show alts under their main
+    shareRecipes   = true,
+    -- linkAlts is left unset until the player answers the one-time question
     -- Gamer word counter (shown in the Armory). Only ever a number.
     gamerCounter   = true,
     gamerWords     = 0,
@@ -55,6 +64,34 @@ end
 function ns.Debug(msg)
     if ns.db and ns.db.debug then
         print("|cffff9933Guildie debug:|r " .. msg)
+    end
+end
+
+-- Hooks: feature modules (recruits, alts, kit ...) listen for things Core notices.
+local hooks = {}
+function ns.AddHook(name, fn)
+    hooks[name] = hooks[name] or {}
+    table.insert(hooks[name], fn)
+end
+
+local reported = {}
+function ns.ReportError(what, err)     -- say it once, instead of failing silently
+    if reported[what] then return end
+    reported[what] = true
+    ns.Print(("|cffff5555Something went wrong in %s:|r %s"):format(what, tostring(err)))
+end
+
+function ns.Fire(name, ...)
+    for _, fn in ipairs(hooks[name] or {}) do
+        local ok, err = pcall(fn, ...)
+        if not ok then ns.ReportError("Guildie (" .. name .. ")", err) end
+    end
+end
+
+function ns.Safe(what, fn)
+    return function(...)
+        local ok, err = pcall(fn, ...)
+        if not ok then ns.ReportError(what, err) end
     end
 end
 
@@ -93,6 +130,13 @@ function ns.InviteNeedsClick()
     return ns.db and ns.db.inviteNeedsClick ~= nil and ns.db.inviteNeedsClick == ClientBuild()
 end
 
+-- Same for chat: once the game has blocked an automatic chat message, remember that for this
+-- client build and go straight to the click popup, instead of trying (and being blocked) again.
+function ns.ChatNeedsClick()
+    if ns.chatNeedsClick then return true end
+    return ns.db ~= nil and ns.db.chatNeedsClick ~= nil and ns.db.chatNeedsClick == ClientBuild()
+end
+
 function ns.Fill(template, name)
     local guild = GetGuildInfo("player") or "the guild"
     local short = ShortName(name)
@@ -127,6 +171,8 @@ end
 local echoWatch = {}
 
 function ns.SendNow(text, chan, target)            -- call only from a click handler
+    ns.lastChatAt = GetTime()
+    ns.lastChatWasClick = true
     return pcall(SendChat, text, chan, nil, target)
 end
 
@@ -144,6 +190,18 @@ local function WatchEcho(m)
     end)
 end
 
+-- The game told us a chat message was blocked: fail everything still waiting for its echo now,
+-- instead of after the timeout.
+local function FailWatches()
+    for i = #echoWatch, 1, -1 do
+        local w = echoWatch[i]
+        if not w.done then
+            w.done = true
+            if w.onFail then w.onFail(w.text) end
+        end
+    end
+end
+
 function ns.OnChatEcho(chan, text)
     for _, w in ipairs(echoWatch) do
         -- a secret echo can't be compared; count it for the oldest message on that channel
@@ -159,6 +217,8 @@ local function Flush()
     while #queue > 0 and not ChatLocked() do
         local m = table.remove(queue, 1)
         if m.onFail then WatchEcho(m) end            -- watch first: the echo can arrive immediately
+        ns.lastChatAt = GetTime()
+        ns.lastChatWasClick = false
         local ok = pcall(SendChat, m.text, m.chan, nil, m.target)
         if not ok then
             ns.chatNeedsClick = true
@@ -186,6 +246,7 @@ end
 -- Anything that needs the click (the reply whisper) has to happen right here, not on a timer.
 function ns.DoInvite(name, fromClick)
     ns.blockedAt = nil
+    ns.lastInviteAt = GetTime()
     Invite(name)
     ns.invitedByMe[Key(name)] = GetTime()
     ns.StartRosterPoll()
@@ -354,7 +415,10 @@ end
 -- Welcoming
 ---------------------------------------------------------------------------
 local JOIN_PATTERN = BuildPattern(ERR_GUILD_JOIN_S or "%s has joined the guild.")
+local LEAVE_PATTERN = BuildPattern(ERR_GUILD_LEAVE_S or "%s has left the guild.")
+local KICK_PATTERN = BuildPattern(ERR_GUILD_REMOVE_SS or "%s has been kicked out of the guild by %s.")
 local welcomed = {}      -- key -> time, so chat line + roster can't both welcome someone
+local joinSeen = {}      -- key -> time, so the join hook fires once per join
 
 local function Welcome(who, source)
     local k = Key(who)
@@ -362,6 +426,10 @@ local function Welcome(who, source)
 
     local mine = ns.invitedByMe[k] and (GetTime() - ns.invitedByMe[k] < 1800)
     ns.Debug(("join detected via %s: %s (invited by Guildie: %s)"):format(source, who, tostring(mine and true or false)))
+    if not joinSeen[k] or GetTime() - joinSeen[k] > 300 then
+        joinSeen[k] = GetTime()
+        ns.Fire("join", who, source, mine and true or false)
+    end
 
     if not db.welcomeEnabled or Trim(db.welcomeText) == "" then
         ns.Log(who, "|cff888888Joined (welcome message is off)|r")
@@ -374,6 +442,7 @@ local function Welcome(who, source)
     welcomed[k] = GetTime()
     ns.invitedByMe[k] = nil
     ns.Log(who, "|cffaaaaaaJoined the guild|r")
+    ns.Fire("welcome", who)
 
     C_Timer.After(tonumber(db.welcomeDelay) or 3, function()
         local text = ns.Fill(db.welcomeText, who)
@@ -390,10 +459,10 @@ local function Welcome(who, source)
                 end)
             end
         end
-        if ns.chatNeedsClick then needClick() return end   -- already learned: go straight to the toast
+        if ns.ChatNeedsClick() then needClick() return end   -- already learned: go straight to the popup
         ns.Say(text, "GUILD", nil, needClick)
         C_Timer.After(4.5, function()
-            if not ns.chatNeedsClick then
+            if not ns.ChatNeedsClick() then
                 db.stats.welcomed = db.stats.welcomed + 1
                 ns.Log(who, "|cff66ccffJoined + welcomed|r")
             end
@@ -410,6 +479,7 @@ function ns.TestWelcome()
     C_Timer.After(2, function()
         local text = "[Guildie test] Checking that welcome messages can post. Ignore me!"
         ns.chatNeedsClick = false
+        if ns.db then ns.db.chatNeedsClick = nil end
         local failed = false
         ns.Say(text, "GUILD", nil, function()
             failed = true
@@ -424,6 +494,13 @@ function ns.TestWelcome()
     end)
 end
 
+-- Someone left: forget that we welcomed them, so a later rejoin is welcomed and recorded again.
+local function Forget(name)
+    local k = Key(name)
+    joinSeen[k] = nil
+    welcomed[k] = nil
+end
+
 local function OnSystem(msg)
     if IsSecret(msg) then
         ns.Debug("system message skipped: secret value")
@@ -434,6 +511,20 @@ local function OnSystem(msg)
     local who = msg:match(JOIN_PATTERN)
     if who then
         Welcome((who:gsub("|H.-|h%[?(.-)%]?|h", "%1")), "chat")
+        return
+    end
+    local gone = msg:match(LEAVE_PATTERN)
+    if gone then
+        gone = gone:gsub("|H.-|h%[?(.-)%]?|h", "%1")
+        Forget(gone)
+        ns.Fire("leave", gone, false)
+        return
+    end
+    local kicked = msg:match(KICK_PATTERN)
+    if kicked then
+        kicked = kicked:gsub("|H.-|h%[?(.-)%]?|h", "%1")
+        Forget(kicked)
+        ns.Fire("leave", kicked, true)
     end
 end
 
@@ -453,6 +544,8 @@ local function ReadRoster()
     return set
 end
 
+function ns.RosterSet() return ReadRoster() or {} end
+
 local function OnRoster()
     local current = ReadRoster()
     if not current then return end
@@ -470,6 +563,7 @@ local function OnRoster()
         end
     end
     roster = current
+    ns.Fire("roster", current)
 end
 
 -- After inviting, poll the roster for a few minutes so a join is noticed quickly
@@ -565,17 +659,34 @@ f:SetScript("OnEvent", function(_, event, ...)
         local addon, func = ...
         if addon ~= ADDON_NAME then return end
         func = tostring(func or "")
-        if func:find("Invite") then
+        -- The game often reports the blocked function as UNKNOWN(). Go by its name when we get
+        -- one, otherwise by whatever we tried a moment ago.
+        local now = GetTime()
+        local sinceInvite = now - (ns.lastInviteAt or -100)
+        local sinceChat = now - (ns.lastChatAt or -100)
+        local kind
+        if func:find("Invite") then kind = "invite"
+        elseif func:find("Chat") then kind = "chat"
+        elseif sinceInvite < 1.5 or sinceChat < 1.5 then
+            kind = (sinceInvite <= sinceChat) and "invite" or "chat"
+        end
+        if kind == "invite" then
             ns.blockedAt = GetTime()
             if not ns.InviteNeedsClick() then
                 db.inviteNeedsClick = ClientBuild()
                 ns.Print("Forever requires a click to send guild invites, so Guildie will show a popup for each one. Your settings are unchanged.")
             end
-        elseif func:find("SendChatMessage") then
-            ns.chatNeedsClick = true
-            ns.Debug("the game blocked an automatic chat message; welcomes will ask for a click")
+        elseif kind == "chat" then
+            if ns.lastChatWasClick and sinceChat < 1.5 then
+                ns.Print("The game blocked that message even though it came from your click. Forever may not let addons post this kind of chat at all.")
+            else
+                ns.chatNeedsClick = true
+                db.chatNeedsClick = ClientBuild()
+                ns.Debug("the game blocked an automatic chat message; from now on welcomes wait for your click")
+                FailWatches()
+            end
         else
-            ns.Print("The game blocked " .. func .. " (" .. event .. ").")
+            ns.Debug("the game blocked " .. func .. " (" .. event .. ")")
         end
         ns.RefreshUI()
     elseif event == "GUILD_ROSTER_UPDATE" then
@@ -617,6 +728,15 @@ SlashCmdList.GUILDIE = function(input)
         ns.Armory.SyncTest()
     elseif cmd == "testwelcome" then
         ns.TestWelcome()
+    elseif cmd == "crafters" or cmd == "recruits" or cmd == "loot" then
+        if ns.OpenArmoryTab then ns.OpenArmoryTab(cmd) end
+    elseif cmd == "alts" then
+        if ns.Alts then ns.Alts.Command(rest) end
+    elseif cmd == "main" then
+        if ns.Alts then ns.Alts.SetMain(rest) end
+    elseif cmd == "recipes" then
+        if ns.Recipes and rest:lower() == "probe" then ns.Recipes.Probe()
+        else ns.Print("/guildie recipes probe - check what the game reports for an open profession window") end
     elseif cmd == "words" then
         local G = ns.GamerWords
         if rest:lower() == "reset" then
@@ -637,6 +757,9 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("/guildie minimap - show or hide the minimap button")
         ns.Print("/guildie testwelcome - check whether welcomes can post to guild chat by themselves")
         ns.Print("/guildie words [reset] - show or reset the gamer word counter")
+        ns.Print("/guildie crafters | recruits | loot - open that Armory tab")
+        ns.Print("/guildie alts [link|unlink] - see and share which characters are yours; /guildie main <name> picks your main")
+        ns.Print("/guildie recipes probe - check that the game shares recipes")
         ns.Print("/guildie on | off - toggle auto-invite")
         ns.Print("/guildie phrase <text> - set the whisper phrase")
         ns.Print("/guildie welcome <text> - set the welcome message ({name}, {guild})")

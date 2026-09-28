@@ -236,6 +236,7 @@ A.Serialize, A.Deserialize = Serialize, Deserialize
 -- Comms: every send's result is recorded so we learn what Forever allows
 ---------------------------------------------------------------------------
 A.stats = { sent = 0, ok = 0, failed = 0, lastResult = "none yet", received = 0, echo = false }
+A.handlers = {}   -- message kind -> function(sender, rest, fromMe); other modules add theirs
 local RESULT_NAME = {}
 if Enum and Enum.SendAddonMessageResult then
     for k, v in pairs(Enum.SendAddonMessageResult) do RESULT_NAME[v] = k end
@@ -280,6 +281,8 @@ local function Send(msg, chan, target)
     if not sending then Pump() end
 end
 
+A.Send = Send
+
 local function SendChunked(kind, payload, chan, target)
     local id = string.format("%03d", math.random(0, 999))
     local total = math.ceil(#payload / CHUNK)
@@ -301,6 +304,8 @@ function A.ApplyPrivacy(rec)
     out.hidden = hidden
     return out
 end
+
+A.SendChunked = SendChunked
 
 local lastSnapshot, lastBroadcast = nil, 0
 function A.Broadcast(force)
@@ -344,6 +349,8 @@ local function OnChunk(sender, id, idx, total, data)
     return table.concat(p.parts)
 end
 
+A.Reassemble = OnChunk
+
 local synctest
 function A.OnAddonMessage(prefix, text, channel, sender)
     if prefix ~= PREFIX then return end
@@ -380,6 +387,9 @@ function A.OnAddonMessage(prefix, text, channel, sender)
         if synctest and rest == synctest.nonce then
             synctest.replies[Short(sender)] = true
         end
+    elseif A.handlers[kind] then
+        local ok, err = pcall(A.handlers[kind], sender, rest, fromMe)
+        if not ok then ns.ReportError("Guildie (" .. kind .. " message)", err) end
     end
 end
 
@@ -493,6 +503,7 @@ local function TryLoginSync(attempt)
         A.Broadcast(true)
         Send("HELLO^" .. PROTO, "GUILD")
         ns.Debug("armory: shared your gear and talents with the guild (login)")
+        ns.Fire("guildReady")
         return
     end
     if C_GuildInfo and C_GuildInfo.GuildRoster then pcall(C_GuildInfo.GuildRoster) end

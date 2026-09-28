@@ -2,10 +2,12 @@
 local ADDON_NAME, ns = ...
 local A = ns.Armory
 
-local W, H = 1010, 570
+local W, H = 1010, 610
 local LIST_W = 480
 local ROWS, ROW_H = 22, 18
 local frame, rows, slotButtons, talentButtons = nil, {}, {}, {}
+local ShowTab                 -- assigned in Build: switch the window to another tab
+local currentTab = "roster"
 local entries, offset, selected, sortBy, sortAsc = {}, 0, nil, "ilvl", false
 
 local SLOT_LABEL = {
@@ -106,6 +108,20 @@ local InsertLink = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_Inse
 ---------------------------------------------------------------------------
 -- Data for the list: every roster member, merged with armory records
 ---------------------------------------------------------------------------
+-- One list entry for a member key, even when the roster list is hiding them (grouped alts).
+local function EntryFor(key)
+    local data = A.GuildTable() or {}
+    for _, r in ipairs(ns.RosterEntries()) do
+        if r.key == key then
+            local rec = data[key]
+            return { key = key, name = r.name, class = (rec and rec.class) or r.class,
+                     level = r.level or (rec and rec.level), online = r.online, rec = rec }
+        end
+    end
+    local rec = data[key]
+    if rec then return { key = key, name = rec.name or key, class = rec.class, level = rec.level, rec = rec, gone = true } end
+end
+
 local function BuildEntries()
     wipe(entries)
     local data = A.GuildTable() or {}
@@ -141,6 +157,24 @@ local function BuildEntries()
     if q ~= "" then
         for i = #entries, 1, -1 do
             if not entries[i].name:lower():find(q, 1, true) then table.remove(entries, i) end
+        end
+    end
+    -- Alts sit under their main (unless you're searching), and the main shows a +N
+    for _, e in ipairs(entries) do e.mainKey, e.altCount = e.key, 0 end
+    if ns.Alts then
+        local byKey = {}
+        for _, e in ipairs(entries) do byKey[e.key] = e end
+        for _, e in ipairs(entries) do
+            local mk = ns.Alts.MainOf(e.key)
+            if mk ~= e.key and byKey[mk] then
+                e.mainKey = mk
+                byKey[mk].altCount = byKey[mk].altCount + 1
+            end
+        end
+        if ns.db.groupAlts ~= false and q == "" then
+            for i = #entries, 1, -1 do
+                if entries[i].mainKey ~= entries[i].key then table.remove(entries, i) end
+            end
         end
     end
     -- Column sort. Missing values (no data, gold not shared) always sink to the bottom.
@@ -201,6 +235,25 @@ local function ShowDetail(e)
             d.updated:SetText(("|cff888888Updated %s ago, from %s|r%s"):format(Age(rec.time), how, note))
         else
             d.updated:SetText("|cff888888No data yet. It fills in when they run Guildie, or when you inspect them.|r")
+        end
+    end
+
+    -- the same player's other characters, as buttons you can click through
+    for _, b in ipairs(d.altBtns) do b:Hide() end
+    d.altsLabel:SetText("")
+    local group = (e and ns.Alts) and ns.Alts.GroupOf(e.key) or {}
+    if e and #group > 1 then
+        d.altsLabel:SetText("Also plays:")
+        local n = 0
+        for _, k in ipairs(group) do
+            if k ~= e.key and n < #d.altBtns then
+                n = n + 1
+                local b, ent = d.altBtns[n], EntryFor(k)
+                b.key = k
+                b.text:SetText(ent and ("|c" .. ClassHex(ent.class) .. ent.name .. "|r") or k)
+                b:SetWidth(math.max(60, b.text:GetStringWidth() + 14))
+                b:Show()
+            end
         end
     end
 
@@ -279,7 +332,8 @@ local function RefreshList()
         row.entry = e
         if e then
             local hex = ClassHex(e.class)
-            row.name:SetText((e.rec and "|c" .. hex or "|cff777777") .. e.name .. "|r")
+            row.name:SetText((e.rec and "|c" .. hex or "|cff777777") .. e.name .. "|r"
+                .. ((e.altCount or 0) > 0 and (" |cff888888+" .. e.altCount .. "|r") or ""))
             row.class:SetText("|c" .. hex .. ClassName(e.class) .. "|r")
             row.level:SetText(e.level or "")
             local il = e.rec and e.rec.ilvl
@@ -361,7 +415,7 @@ local function Build()
     -- Search + sort
     local search = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
     search:SetSize(LIST_W - 16 - 152, 20)
-    search:SetPoint("TOPLEFT", 20, -32)
+    search:SetPoint("TOPLEFT", 20, -56)
     search:SetAutoFocus(false)
     search:SetScript("OnTextChanged", function() offset = 0 RefreshList() end)
     search:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
@@ -405,7 +459,7 @@ local function Build()
     local ARROW_DOWN = "|TInterface\\Buttons\\Arrow-Down-Up:12:12:0:-2|t"
     local ARROW_UP = "|TInterface\\Buttons\\Arrow-Up-Up:12:12:0:2|t"
     local header = CreateFrame("Frame", nil, f)
-    header:SetPoint("TOPLEFT", 14, -58)
+    header:SetPoint("TOPLEFT", 14, -82)
     header:SetSize(LIST_W, 18)
     local hbg = header:CreateTexture(nil, "BACKGROUND")
     hbg:SetAllPoints()
@@ -446,7 +500,7 @@ local function Build()
 
     -- List rows
     local list = CreateFrame("Frame", nil, f)
-    list:SetPoint("TOPLEFT", 14, -78)
+    list:SetPoint("TOPLEFT", 14, -102)
     list:SetSize(LIST_W, ROWS * ROW_H)
     list:EnableMouseWheel(true)
     list:SetScript("OnMouseWheel", function(_, delta)
@@ -481,12 +535,12 @@ local function Build()
     local div = f:CreateTexture(nil, "ARTWORK")
     div:SetColorTexture(1, 0.82, 0, 0.25)
     div:SetWidth(1)
-    div:SetPoint("TOPLEFT", LIST_W + 22, -32)
+    div:SetPoint("TOPLEFT", LIST_W + 22, -56)
     div:SetPoint("BOTTOMLEFT", LIST_W + 22, 40)
 
     -- Detail panel
     local d = CreateFrame("Frame", nil, f)
-    d:SetPoint("TOPLEFT", LIST_W + 34, -30)
+    d:SetPoint("TOPLEFT", LIST_W + 34, -56)
     d:SetPoint("BOTTOMRIGHT", -16, 40)
     f.detail = d
     d.title = Label(d, "GameFontNormalLarge")
@@ -499,6 +553,24 @@ local function Build()
     d.profs:SetPoint("TOPLEFT", d.updated, "BOTTOMLEFT", 0, -6)
     d.profs:SetPoint("RIGHT", d, "RIGHT", 0, 0)
     d.profs:SetJustifyH("LEFT")
+    d.altsLabel = Label(d, "GameFontHighlightSmall")
+    d.altsLabel:SetPoint("TOPLEFT", 0, -84)
+    d.altBtns = {}
+    for i = 1, 6 do
+        local b = CreateFrame("Button", nil, d)
+        b:SetHeight(18)
+        b.text = Label(b, "GameFontHighlightSmall")
+        b.text:SetPoint("CENTER")
+        b:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
+        if i == 1 then b:SetPoint("LEFT", d.altsLabel, "RIGHT", 6, 0)
+        else b:SetPoint("LEFT", d.altBtns[i - 1], "RIGHT", 4, 0) end
+        b:SetScript("OnClick", function(self)
+            local ent = EntryFor(self.key)
+            if ent then ShowDetail(ent) RefreshList() end
+        end)
+        b:Hide()
+        d.altBtns[i] = b
+    end
 
     -- Gear: two columns
     local colW = 235
@@ -507,7 +579,7 @@ local function Build()
         local row = (i <= 9) and (i - 1) or (i - 10)
         local b = CreateFrame("Button", nil, d)
         b:SetSize(colW, 26)
-        b:SetPoint("TOPLEFT", col * (colW + 8), -80 - row * 28)
+        b:SetPoint("TOPLEFT", col * (colW + 8), -104 - row * 28)
         b.slot = slot
         b.icon = b:CreateTexture(nil, "ARTWORK")
         b.icon:SetSize(24, 24)
@@ -540,7 +612,7 @@ local function Build()
 
     -- Talents
     d.talentHeader = Label(d, "GameFontNormal")
-    d.talentHeader:SetPoint("TOPLEFT", 0, -80 - 9 * 28 - 6)
+    d.talentHeader:SetPoint("TOPLEFT", 0, -104 - 9 * 28 - 6)
     d.noTalents = Label(d, "GameFontDisableSmall", "No talent data.")
     d.noTalents:SetPoint("TOPLEFT", d.talentHeader, "BOTTOMLEFT", 0, -6)
     local perRow, size = 17, 26
@@ -601,7 +673,7 @@ local function Build()
 
     -- Privacy: what you volunteer to your guild
     local priv = CreateFrame("Frame", nil, f, "BackdropTemplate")
-    priv:SetSize(230, 150)
+    priv:SetSize(270, 202)
     priv:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16, 38)
     priv:SetFrameLevel(f:GetFrameLevel() + 20)
     if priv.SetBackdrop then
@@ -618,6 +690,8 @@ local function Build()
         { "shareTalents", "Talents and loadout" },
         { "shareProfessions", "Professions" },
         { "shareGold", "Gold on hand" },
+        { "shareRecipes", "Recipes (for the Crafters tab)" },
+        { "linkAlts", "Link my characters as alts" },
     }
     priv.checks = {}
     for i, o in ipairs(opts) do
@@ -632,6 +706,7 @@ local function Build()
         cb.key = o[1]
         cb:SetScript("OnClick", function(self)
             ns.db[self.key] = self:GetChecked() and true or false
+            ns.Fire("privacy", self.key)
             -- re-share now so guildmates' copies reflect the change (hidden data gets cleared)
             A.Broadcast(true)
             RefreshList()
@@ -640,7 +715,7 @@ local function Build()
     end
     priv:SetScript("OnShow", function(self)
         for _, cb in ipairs(self.checks) do
-            if cb.key == "shareGold" then cb:SetChecked(ns.db[cb.key] == true)
+            if cb.key == "shareGold" or cb.key == "linkAlts" then cb:SetChecked(ns.db[cb.key] == true)
             else cb:SetChecked(ns.db[cb.key] ~= false) end
         end
     end)
@@ -655,14 +730,84 @@ local function Build()
 
     f:SetScript("OnShow", function()
         if C_GuildInfo and C_GuildInfo.GuildRoster then pcall(C_GuildInfo.GuildRoster) end
-        RefreshList()
+        if currentTab == "roster" then RefreshList() else ShowTab(currentTab) end
     end)
     pcall(f.RegisterEvent, f, "GET_ITEM_INFO_RECEIVED")
     pcall(f.RegisterEvent, f, "GUILD_ROSTER_UPDATE")
     f:SetScript("OnEvent", function() A.OnDataChanged() end)
 
+    -- "Group alts" switch under the list
+    local grp = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+    grp:SetSize(22, 22)
+    grp:SetPoint("TOPRIGHT", list, "BOTTOMRIGHT", -96, -2)
+    if grp.text then grp.text:SetText("") end
+    if grp.Text then grp.Text:SetText("") end
+    local gl = Label(grp, "GameFontHighlightSmall", "Group alts")
+    gl:SetPoint("LEFT", grp, "RIGHT", 2, 1)
+    grp:SetHitRectInsets(0, -70, 0, 0)
+    grp:SetChecked(ns.db.groupAlts ~= false)
+    grp:SetScript("OnClick", function(self)
+        ns.db.groupAlts = self:GetChecked() and true or false
+        RefreshList()
+    end)
+
+    -- Tabs: the roster (this window's own list) plus one panel per module. A tab that fails to
+    -- build is reported once and left out, instead of taking the whole window down.
+    local rosterWidgets = { search, f.gw, header, list, f.count, div, d, grp }
+    local panels, tabButtons, tabs = {}, {}, { { key = "roster", label = "Roster" } }
+    for _, t in ipairs(ns.armoryTabs) do
+        local ok, panel = pcall(t.build, f)
+        if ok and panel then
+            panel:SetPoint("TOPLEFT", f, "TOPLEFT", 14, -54)
+            panel:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -14, 40)
+            panel:Hide()
+            panels[t.key] = panel
+            tabs[#tabs + 1] = t
+        else
+            ns.ReportError("the " .. t.label .. " tab", panel)
+        end
+    end
+
+    ShowTab = function(key)
+        if key ~= "roster" and not panels[key] then key = "roster" end
+        currentTab = key
+        for _, w in ipairs(rosterWidgets) do w:SetShown(key == "roster") end
+        for k, pnl in pairs(panels) do pnl:SetShown(k == key) end
+        for k, b in pairs(tabButtons) do
+            if k == key then b:LockHighlight() else b:UnlockHighlight() end
+        end
+        if key == "roster" then
+            RefreshList()
+        else
+            for _, t in ipairs(tabs) do
+                if t.key == key and t.onShow then
+                    local ok, err = pcall(t.onShow, panels[key])
+                    if not ok then ns.ReportError("the " .. t.label .. " tab", err) end
+                end
+            end
+        end
+    end
+
+    local tx = 14
+    for _, t in ipairs(tabs) do
+        local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        b:SetSize(96, 22)
+        b:SetPoint("TOPLEFT", tx, -28)
+        b:SetText(t.label)
+        b:SetScript("OnClick", function() ShowTab(t.key) end)
+        tabButtons[t.key] = b
+        tx = tx + 100
+    end
+    tabButtons.roster:LockHighlight()
+
     ShowDetail(nil)
     f:Hide()
+end
+
+function ns.OpenArmoryTab(key)
+    if not frame then Build() end
+    frame:Show()
+    ShowTab(key or "roster")
 end
 
 function ns.ToggleArmory()

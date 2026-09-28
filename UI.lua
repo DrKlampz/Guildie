@@ -331,7 +331,11 @@ local function ShowNextToast()
             local it = toast.item
             toast:Hide()
             if it then
-                local ok = ns.SendNow(it.text, it.chan, it.target)
+                local ok = true
+                for _, line in ipairs(it.lines or { it.text }) do   -- a kit is several whispers from one click
+                    local sent = ns.SendNow(line, it.chan, it.target)
+                    ok = ok and sent
+                end
                 if ok and it.onSent then it.onSent() end
             end
             ShowNextToast()
@@ -349,8 +353,8 @@ local function ShowNextToast()
     if PlaySound and SOUNDKIT and SOUNDKIT.TELL_MESSAGE then pcall(PlaySound, SOUNDKIT.TELL_MESSAGE) end
 end
 
-function ns.ShowSendToast(title, text, chan, target, onSent)
-    toastQueue[#toastQueue + 1] = { title = title, text = text, chan = chan, target = target, onSent = onSent }
+function ns.ShowSendToast(title, text, chan, target, onSent, lines)
+    toastQueue[#toastQueue + 1] = { title = title, text = text, chan = chan, target = target, onSent = onSent, lines = lines }
     ShowNextToast()
 end
 

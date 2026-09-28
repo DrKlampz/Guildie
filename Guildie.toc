@@ -1,18 +1,25 @@
 ## Interface: 16001
 ## Title: |cff33ff99Guildie|r
-## Notes: Whisper-phrase guild invites, custom welcome messages, and a guild armory of gear and talent builds.
+## Notes: Whisper-phrase guild invites, welcome messages, and a guild armory: gear, talents, professions, who-can-craft-what, recruit tracking and loot help.
 ## Author: David
 ## Version: @project-version@
 ## Category: Chat & Communication
 ## IconTexture: Interface\AddOns\Guildie\media\icon
 ## AddonCompartmentFunc: Guildie_OnAddonCompartmentClick
-## SavedVariables: GuildieDB, GuildieArmoryDB
+## SavedVariables: GuildieDB, GuildieArmoryDB, GuildieGuildDB
 ## SavedVariablesPerCharacter: GuildieCharDB
 ## X-License: MIT
 ## X-Wago-ID: E6gzvON1
 
 Core.lua
+Data.lua
 Armory.lua
+Widgets.lua
+Alts.lua
+Recipes.lua
+Recruits.lua
+Loot.lua
+LootUI.lua
 UI.lua
 ArmoryUI.lua
 Minimap.lua
