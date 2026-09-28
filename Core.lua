@@ -24,6 +24,9 @@ ns.DEFAULTS = {
     -- Minimap button
     minimapShow    = true,
     minimapAngle   = 200,
+    -- Anniversaries
+    anniversaryEnabled = true,
+    anniversaryText    = "|cff33ff99Guildie:|r everyone congratulate {name} on {years} year(s) in {guild}!",
     -- Recruit welcome kit: up to three whispers sent to new recruits
     kitEnabled     = false,
     kit1           = "",
@@ -728,6 +731,17 @@ SlashCmdList.GUILDIE = function(input)
         ns.Armory.SyncTest()
     elseif cmd == "testwelcome" then
         ns.TestWelcome()
+    elseif cmd == "anniversaries" then
+        if ns.OpenArmoryTab then ns.OpenArmoryTab("anniversaries") end
+    elseif cmd == "timezone" or cmd == "tz" then
+        if rest:lower():match("^clear") then
+            if ns.Timezones then ns.Timezones.Clear() end
+        else
+            local off, label = rest:match("^(%S+)%s*(.*)$")
+            if ns.Timezones then ns.Timezones.Set(off, label) end
+        end
+    elseif cmd == "schedule" then
+        if ns.OpenArmoryTab then ns.OpenArmoryTab("schedule") end
     elseif cmd == "bind" then
         local key, opt = rest:match("^(%S+)%s*(%S*)")
         ns.BindSend(key, (opt or ""):lower() == "force")
@@ -763,7 +777,8 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("/guildie testwelcome - check whether welcomes can post to guild chat by themselves")
         ns.Print("/guildie bind <key> - press a key to send the welcome popup (/guildie unbind to remove)")
         ns.Print("/guildie words [reset] - show or reset the gamer word counter")
-        ns.Print("/guildie crafters | recruits | loot - open that Armory tab")
+        ns.Print("/guildie crafters | recruits | loot | schedule | anniversaries - open that Armory tab")
+        ns.Print("/guildie timezone <offset> [label] - share your time zone for raid scheduling (/guildie timezone clear to remove)")
         ns.Print("/guildie alts [link|unlink] - see and share which characters are yours; /guildie main <name> picks your main")
         ns.Print("/guildie recipes probe - check that the game shares recipes")
         ns.Print("/guildie on | off - toggle auto-invite")
