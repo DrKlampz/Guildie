@@ -728,6 +728,11 @@ SlashCmdList.GUILDIE = function(input)
         ns.Armory.SyncTest()
     elseif cmd == "testwelcome" then
         ns.TestWelcome()
+    elseif cmd == "bind" then
+        local key, opt = rest:match("^(%S+)%s*(%S*)")
+        ns.BindSend(key, (opt or ""):lower() == "force")
+    elseif cmd == "unbind" then
+        ns.UnbindSend()
     elseif cmd == "crafters" or cmd == "recruits" or cmd == "loot" then
         if ns.OpenArmoryTab then ns.OpenArmoryTab(cmd) end
     elseif cmd == "alts" then
@@ -756,6 +761,7 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("/guildie synctest - check whether guild sync works on this client")
         ns.Print("/guildie minimap - show or hide the minimap button")
         ns.Print("/guildie testwelcome - check whether welcomes can post to guild chat by themselves")
+        ns.Print("/guildie bind <key> - press a key to send the welcome popup (/guildie unbind to remove)")
         ns.Print("/guildie words [reset] - show or reset the gamer word counter")
         ns.Print("/guildie crafters | recruits | loot - open that Armory tab")
         ns.Print("/guildie alts [link|unlink] - see and share which characters are yours; /guildie main <name> picks your main")

@@ -323,34 +323,109 @@ local function ShowNextToast()
         toast.msg:SetPoint("RIGHT", -12, 0)
         toast.msg:SetJustifyH("LEFT")
         toast.msg:SetMaxLines(2)
-        local send = CreateFrame("Button", nil, toast, "UIPanelButtonTemplate")
+        toast.hint = toast:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        toast.hint:SetPoint("BOTTOMLEFT", 12, 14)
+        -- Named so a key can be bound to it (/guildie bind). A key press counts as the real input
+        -- the game wants, exactly like a click. With no popup showing, pressing it does nothing.
+        local send = CreateFrame("Button", "GuildieToastSend", toast, "UIPanelButtonTemplate")
         send:SetSize(90, 22)
         send:SetPoint("BOTTOMRIGHT", -10, 10)
         send:SetText("Send")
         send:SetScript("OnClick", function()
             local it = toast.item
+            if not it or not toast:IsShown() then return end
+            toast.item = nil
             toast:Hide()
-            if it then
-                local ok = true
-                for _, line in ipairs(it.lines or { it.text }) do   -- a kit is several whispers from one click
-                    local sent = ns.SendNow(line, it.chan, it.target)
-                    ok = ok and sent
-                end
-                if ok and it.onSent then it.onSent() end
+            local ok = true
+            for _, line in ipairs(it.lines or { it.text }) do   -- a kit is several whispers from one click
+                local sent = ns.SendNow(line, it.chan, it.target)
+                ok = ok and sent
             end
+            if ok and it.onSent then it.onSent() end
             ShowNextToast()
         end)
         local skip = CreateFrame("Button", nil, toast, "UIPanelButtonTemplate")
         skip:SetSize(80, 22)
         skip:SetPoint("RIGHT", send, "LEFT", -6, 0)
         skip:SetText("Skip")
-        skip:SetScript("OnClick", function() toast:Hide() ShowNextToast() end)
+        skip:SetScript("OnClick", function() toast.item = nil toast:Hide() ShowNextToast() end)
     end
     toast.item = item
     toast.title:SetText("|cff33ff99Guildie:|r " .. item.title)
     toast.msg:SetText("|cff40ff40[" .. item.chan:sub(1, 1) .. item.chan:sub(2):lower() .. "]|r " .. item.text)
+    local key = ns.SendKey()
+    toast.hint:SetText(key and ("Press |cffffd100" .. key .. "|r to send") or "Tip: /guildie bind F  sends with a key")
     toast:Show()
     if PlaySound and SOUNDKIT and SOUNDKIT.TELL_MESSAGE then pcall(PlaySound, SOUNDKIT.TELL_MESSAGE) end
+end
+
+---------------------------------------------------------------------------
+-- A key for the popup's Send button: /guildie bind <key>
+---------------------------------------------------------------------------
+local SEND_ACTION = "CLICK GuildieToastSend:LeftButton"
+
+-- "shift-ctrl-f" -> "CTRL-SHIFT-F": the game wants modifiers in ALT, CTRL, SHIFT order
+local function NormalizeKey(text)
+    text = tostring(text or ""):upper():gsub("%s+", "")
+    if text == "" then return nil end
+    local mods, key = {}, text
+    while true do
+        local m, rest = key:match("^(%a+)%-(.+)$")
+        if m == "ALT" or m == "CTRL" or m == "SHIFT" then mods[m] = true key = rest else break end
+    end
+    local out = {}
+    for _, m in ipairs({ "ALT", "CTRL", "SHIFT" }) do if mods[m] then out[#out + 1] = m end end
+    out[#out + 1] = key
+    return table.concat(out, "-")
+end
+ns.NormalizeKey = NormalizeKey
+
+-- The key currently bound to the popup, as text, or nil.
+function ns.SendKey()
+    if not GetBindingKey then return nil end
+    local k = GetBindingKey(SEND_ACTION)
+    if not k or k == "" then return nil end
+    return (GetBindingText and GetBindingText(k)) or k
+end
+
+function ns.BindSend(text, force)
+    local key = NormalizeKey(text)
+    if not key then
+        ns.Print("Usage: /guildie bind <key>   for example  /guildie bind F   or   /guildie bind SHIFT-F")
+        return
+    end
+    if not (SetBinding and GetBindingAction and SaveBindings) then
+        ns.Print("This game client doesn't let addons set key bindings.")
+        return
+    end
+    if InCombatLockdown and InCombatLockdown() then
+        ns.Print("Key bindings can't be changed during combat. Try again once it's over.")
+        return
+    end
+    local existing = GetBindingAction(key)
+    if existing and existing ~= "" and existing ~= SEND_ACTION and not force then
+        ns.Print(("%s is already used for %s. Pick another key, or use it anyway with: /guildie bind %s force"):format(key, existing, key))
+        return
+    end
+    for _, old in ipairs({ GetBindingKey(SEND_ACTION) }) do SetBinding(old) end   -- one key at a time
+    if SetBinding(key, SEND_ACTION) then
+        SaveBindings(GetCurrentBindingSet and GetCurrentBindingSet() or 1)
+        ns.Print(("Pressing |cffffd100%s|r now sends the popup's message. While that key is bound it does nothing else."):format(key))
+    else
+        ns.Print(("The game wouldn't bind %s. Try a different key."):format(key))
+    end
+end
+
+function ns.UnbindSend()
+    if not (SetBinding and GetBindingKey and SaveBindings) then return end
+    if InCombatLockdown and InCombatLockdown() then
+        ns.Print("Key bindings can't be changed during combat. Try again once it's over.")
+        return
+    end
+    local had = false
+    for _, old in ipairs({ GetBindingKey(SEND_ACTION) }) do SetBinding(old) had = true end
+    SaveBindings(GetCurrentBindingSet and GetCurrentBindingSet() or 1)
+    ns.Print(had and "The send key is unbound." or "No key was bound.")
 end
 
 function ns.ShowSendToast(title, text, chan, target, onSent, lines)
