@@ -336,6 +336,12 @@ local function ShowNextToast()
             if not it or not toast:IsShown() then return end
             toast.item = nil
             toast:Hide()
+            if it.kind == "invite" then
+                ns.SendQueuedInvites()
+                if #ns.PendingInvites() > 0 then table.insert(toastQueue, 1, { kind = "invite" }) end
+                ShowNextToast()
+                return
+            end
             local ok = true
             for _, line in ipairs(it.lines or { it.text }) do   -- a kit is several whispers from one click
                 local sent = ns.SendNow(line, it.chan, it.target)
@@ -348,9 +354,35 @@ local function ShowNextToast()
         skip:SetSize(80, 22)
         skip:SetPoint("RIGHT", send, "LEFT", -6, 0)
         skip:SetText("Skip")
-        skip:SetScript("OnClick", function() toast.item = nil toast:Hide() ShowNextToast() end)
+        skip:SetScript("OnClick", function()
+            if toast.item and toast.item.kind == "invite" then ns.SkipQueuedInvites() end
+            toast.item = nil toast:Hide() ShowNextToast()
+        end)
+        toast.send = send
     end
     toast.item = item
+    if item.kind == "invite" then
+        local list = ns.PendingInvites()
+        if #list == 0 then toast.item = nil ShowNextToast() return end
+        local names = {}
+        for i, p in ipairs(list) do
+            if i <= 6 then names[#names + 1] = (p.name:gsub("%-.*$", "")) end
+        end
+        if #list > 6 then names[#names + 1] = "+" .. (#list - 6) .. " more" end
+        toast.title:SetText("|cff33ff99Guildie:|r " .. (#list == 1 and (names[1] .. " wants a guild invite")
+            or (#list .. " people want a guild invite")))
+        toast.msg:SetText(table.concat(names, ", "))
+        local label = (#list == 1 and "Invite") or (ns.OnePerClick() and ("Invite next (" .. #list .. ")")) or ("Invite all (" .. #list .. ")")
+        toast.send:SetText(label)
+        toast.send:SetWidth(math.max(90, 18 + 7 * #label))
+        local key = ns.SendKey()
+        toast.hint:SetText(key and ("Press |cffffd100" .. key .. "|r to invite") or "Tip: /guildie bind F  invites with a key")
+        toast:Show()
+        if PlaySound and SOUNDKIT and SOUNDKIT.TELL_MESSAGE then pcall(PlaySound, SOUNDKIT.TELL_MESSAGE) end
+        return
+    end
+    toast.send:SetText("Send")
+    toast.send:SetWidth(90)
     toast.title:SetText("|cff33ff99Guildie:|r " .. item.title)
     toast.msg:SetText("|cff40ff40[" .. item.chan:sub(1, 1) .. item.chan:sub(2):lower() .. "]|r " .. item.text)
     local key = ns.SendKey()
@@ -426,6 +458,21 @@ function ns.UnbindSend()
     for _, old in ipairs({ GetBindingKey(SEND_ACTION) }) do SetBinding(old) had = true end
     SaveBindings(GetCurrentBindingSet and GetCurrentBindingSet() or 1)
     ns.Print(had and "The send key is unbound." or "No key was bound.")
+end
+
+-- Invites share one popup entry: refresh it if it's up or waiting, otherwise put it first in line.
+function ns.ShowInviteToast()
+    if toast and toast:IsShown() and toast.item and toast.item.kind == "invite" then
+        local it = toast.item
+        toast.item = nil
+        toast:Hide()
+        table.insert(toastQueue, 1, it)
+        ShowNextToast()
+        return
+    end
+    for _, it in ipairs(toastQueue) do if it.kind == "invite" then return end end
+    table.insert(toastQueue, 1, { kind = "invite" })
+    ShowNextToast()
 end
 
 function ns.ShowSendToast(title, text, chan, target, onSent, lines)

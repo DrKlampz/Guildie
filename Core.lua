@@ -263,8 +263,7 @@ function ns.DoInvite(name, fromClick)
                 ns.Log(name, "|cffff5555Invite blocked by the game|r")
             else
                 -- don't drop the recruit: ask for the click the game wants
-                ns.Log(name, "|cffffaa00Invite needs your click|r")
-                StaticPopup_Show("GUILDIE_CONFIRM", ShortName(name), nil, name)
+                ns.QueueInvite(name)
             end
             return
         end
@@ -278,16 +277,81 @@ function ns.DoInvite(name, fromClick)
     end)
 end
 
-StaticPopupDialogs["GUILDIE_CONFIRM"] = {
-    text = "|cffffd100%s|r whispered your invite phrase.\nSend a guild invite?",
-    button1 = ACCEPT,
-    button2 = CANCEL,
-    OnAccept = function(_, data) ns.DoInvite(data, true) end,
-    timeout = 60,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-}
+---------------------------------------------------------------------------
+-- Invites waiting for your click. Everyone who asks joins one queue and one popup lists them
+-- all, so a second request never replaces the first. One click invites everyone waiting; if
+-- the game turns out to allow only one invite per click, Guildie notices from the server's
+-- replies, puts the rest back in the queue, and goes one per click on this game build.
+---------------------------------------------------------------------------
+ns.pendingInvites = {}
+ns.inviteAnswered = {}          -- [key] = time the server answered an invite we sent
+local INVITE_WAIT = 300         -- a request is dropped after 5 minutes without a click
+
+function ns.QueueInvite(name)
+    local k = Key(name)
+    for _, p in ipairs(ns.pendingInvites) do if p.key == k then return end end
+    ns.pendingInvites[#ns.pendingInvites + 1] = { name = name, key = k, at = GetTime() }
+    ns.Log(name, "|cffffaa00Waiting for your click to invite|r")
+    if ns.ShowInviteToast then ns.ShowInviteToast() end
+end
+
+function ns.PendingInvites()
+    local now, keep = GetTime(), {}
+    for _, p in ipairs(ns.pendingInvites) do
+        if now - p.at < INVITE_WAIT then
+            keep[#keep + 1] = p
+        else
+            ns.Log(p.name, "|cff888888Invite request expired (no click within 5 minutes)|r")
+        end
+    end
+    ns.pendingInvites = keep
+    return keep
+end
+
+function ns.OnePerClick()
+    return db.inviteOnePerClick ~= nil and db.inviteOnePerClick == ClientBuild()
+end
+
+-- Runs from the popup's button: a real click, or the key from /guildie bind.
+function ns.SendQueuedInvites()
+    local list = ns.PendingInvites()
+    if #list == 0 then return 0 end
+    local batch = ns.OnePerClick() and { list[1] } or list
+    local inBatch, rest = {}, {}
+    for _, p in ipairs(batch) do inBatch[p.key] = true end
+    for _, p in ipairs(list) do if not inBatch[p.key] then rest[#rest + 1] = p end end
+    ns.pendingInvites = rest
+    local sentAt = GetTime()
+    for _, p in ipairs(batch) do ns.DoInvite(p.name, true) end
+    if #batch > 1 then
+        -- which invites did the server actually get?
+        C_Timer.After(3, function()
+            local answered, missed = 0, {}
+            for _, p in ipairs(batch) do
+                local t = ns.inviteAnswered[p.key]
+                if t and t >= sentAt then answered = answered + 1 else missed[#missed + 1] = p end
+            end
+            if answered > 0 and #missed > 0 then
+                db.inviteOnePerClick = ClientBuild()
+                ns.Print(("The game sent %d of %d invites from that click, so Guildie will invite one person per click from now on. The other %d are back in the queue.")
+                    :format(answered, #batch, #missed))
+                for i = #missed, 1, -1 do
+                    local p = missed[i]
+                    p.at = GetTime()
+                    table.insert(ns.pendingInvites, 1, p)
+                    ns.Log(p.name, "|cffffaa00Back in the queue (one invite per click)|r")
+                end
+                if ns.ShowInviteToast then ns.ShowInviteToast() end
+            end
+        end)
+    end
+    return #batch
+end
+
+function ns.SkipQueuedInvites()
+    for _, p in ipairs(ns.pendingInvites) do ns.Log(p.name, "|cff888888Invite skipped|r") end
+    ns.pendingInvites = {}
+end
 
 -- During chat lockdown a whisper's text and sender arrive secret. Its lineID never is,
 -- so remember it and read the line again once lockdown ends.
@@ -367,7 +431,7 @@ OnWhisper = function(msg, sender, lineID)
     if db.confirm or ns.InviteNeedsClick() then
         ns.Debug(db.confirm and "  -> matched, showing confirm popup"
             or "  -> matched; this client needs a click to invite, showing popup")
-        StaticPopup_Show("GUILDIE_CONFIRM", ShortName(sender), nil, sender)
+        ns.QueueInvite(sender)
     else
         ns.Debug("  -> matched, inviting")
         ns.DoInvite(sender)
@@ -401,6 +465,7 @@ local function CheckInviteResult(msg)
             who = (who:gsub("|H.-|h%[?(.-)%]?|h", "%1"))
             local k = Key(who)
             if ns.invitedByMe[k] then
+                ns.inviteAnswered[k] = GetTime()
                 ns.Debug("  server: " .. msg)
                 ns.Log(who, r.label)
                 if r.clear then
