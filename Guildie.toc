@@ -10,6 +10,7 @@
 ## SavedVariablesPerCharacter: GuildieCharDB
 ## X-License: MIT
 ## X-Wago-ID: E6gzvON1
+## X-Curse-Project-ID: 1723387
 
 Core.lua
 Data.lua
