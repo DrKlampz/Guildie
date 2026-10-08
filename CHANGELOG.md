@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.9.1
+- Diagnostics: Guildie now keeps its last 250 debug lines in the saved settings all the time (nothing prints unless debug is on), records which events the game accepted at login, and `/guildie report` prints what this game has taught it (does inviting or chatting need a click, one invite per click, whispers seen) plus the latest lines. Use it right after an invite fails to fire.
+
 ## v1.9.0
 - New **Zone** tab (`/guildie zone`): who in the guild is in your zone, and who else has quests from it. Shared quests are highlighted, hover a row for the full list, click to whisper. Look up any other zone too.
 - Guildmates share their quest list with each other (turn off with `/guildie zone share off`); optional chat alert when a guildmate arrives in your zone (`/guildie zone alerts off`).

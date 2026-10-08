@@ -66,9 +66,16 @@ function ns.Print(msg)
     print("|cff33ff99Guildie:|r " .. msg)
 end
 
+-- Every debug line is also kept (last 250) in the saved settings, so a problem can be diagnosed
+-- afterwards from /guildie report or the saved-variables file, without having to catch it live.
 function ns.Debug(msg)
-    if ns.db and ns.db.debug then
-        print("|cffff9933Guildie debug:|r " .. msg)
+    local d = ns.db
+    if not d then return end
+    d.trace = d.trace or {}
+    d.trace[#d.trace + 1] = date("%m/%d %H:%M:%S ") .. tostring(msg)
+    if #d.trace > 250 then table.remove(d.trace, 1) end
+    if d.debug then
+        print("|cffff9933Guildie debug:|r " .. tostring(msg))
     end
 end
 
@@ -253,6 +260,8 @@ function ns.DoInvite(name, fromClick)
     ns.blockedAt = nil
     ns.lastInviteAt = GetTime()
     local okInv, errInv = pcall(Invite, name)
+    ns.Debug(("invite call for %s: fromClick=%s ok=%s%s"):format(tostring(name), tostring(fromClick and true or false),
+        tostring(okInv), okInv and "" or (" err=" .. tostring(errInv))))
     if not okInv then
         ns.Debug("  Invite call failed: " .. tostring(errInv))
         ns.blockedAt = GetTime()
@@ -297,6 +306,7 @@ local INVITE_WAIT = 1800        -- a request is dropped after 30 minutes without
 
 function ns.QueueInvite(name)
     local k = Key(name)
+    ns.Debug("QueueInvite " .. tostring(name) .. " (waiting now: " .. #ns.pendingInvites .. ")")
     for _, p in ipairs(ns.pendingInvites) do if p.key == k then return end end
     ns.pendingInvites[#ns.pendingInvites + 1] = { name = name, key = k, at = GetTime() }
     ns.Log(name, "|cffffaa00Waiting for your click to invite|r")
@@ -330,6 +340,7 @@ function ns.SendQueuedInvites()
     local list = ns.PendingInvites()
     if #list == 0 then return 0 end
     local batch = ns.OnePerClick() and { list[1] } or list
+    ns.Debug(("popup click: %d waiting, sending %d invite(s) (one per click: %s)"):format(#list, #batch, tostring(ns.OnePerClick())))
     local inBatch, rest = {}, {}
     for _, p in ipairs(batch) do inBatch[p.key] = true end
     for _, p in ipairs(list) do if not inBatch[p.key] then rest[#rest + 1] = p end end
@@ -396,7 +407,7 @@ local function PollLockedLines()
 end
 
 OnWhisper = function(msg, sender, lineID)
-    if not db.enabled then return end
+    if not db.enabled then ns.Debug("  -> ignored: auto-invite is turned off (/guildie on)") return end
     if IsSecret(msg) or IsSecret(sender) then
         if lineID and not IsSecret(lineID) then
             lockedLines[#lockedLines + 1] = { lineID = lineID, t = GetTime() }
@@ -706,10 +717,12 @@ end
 ---------------------------------------------------------------------------
 local f = CreateFrame("Frame")
 -- An event this client doesn't have RAISES and would abort the file, so guard each one
+ns.eventStatus = {}
 for _, ev in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "CHAT_MSG_WHISPER", "CHAT_MSG_SYSTEM",
     "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN", "PLAYER_GUILD_UPDATE", "GUILD_ROSTER_UPDATE",
     "CHAT_MSG_GUILD", "CHAT_MSG_WHISPER_INFORM" }) do
-    pcall(f.RegisterEvent, f, ev)
+    local ok = pcall(f.RegisterEvent, f, ev)
+    ns.eventStatus[ev] = ok and true or false
 end
 
 f:SetScript("OnEvent", function(_, event, ...)
@@ -723,10 +736,21 @@ f:SetScript("OnEvent", function(_, event, ...)
     if not db then return end
 
     if event == "PLAYER_LOGIN" then
+        local bad = {}
+        for ev, ok in pairs(ns.eventStatus) do if not ok then bad[#bad + 1] = ev end end
+        ns.Debug(("login: version %s build %s; events not registered: %s; enabled=%s phrase=%q"):format(
+            tostring(ns.VERSION), tostring(ClientBuild()), #bad > 0 and table.concat(bad, ",") or "none",
+            tostring(db.enabled), tostring(db.phrase)))
         if ns.RegisterSettings then ns.RegisterSettings() end
         if RequestRoster then pcall(RequestRoster) end
     elseif event == "CHAT_MSG_WHISPER" then
         local msg, sender = ...
+        ns.whispersSeen = (ns.whispersSeen or 0) + 1
+        if IsSecret(msg) or IsSecret(sender) then
+            ns.Debug("event: whisper #" .. ns.whispersSeen .. " arrived with secret text/sender (chat lockdown)")
+        else
+            ns.Debug(("event: whisper #%d from %s"):format(ns.whispersSeen, tostring(sender)))
+        end
         OnWhisper(msg, sender, (select(11, ...)))
     elseif event == "CHAT_MSG_GUILD" then
         local text, _, _, _, _, _, _, _, _, _, _, guid = ...
@@ -777,6 +801,24 @@ f:SetScript("OnEvent", function(_, event, ...)
         ns.RefreshUI() -- guild status changed
     end
 end)
+
+-- /guildie report: what Guildie has learned about this client plus the last debug lines
+function ns.Report(n)
+    local P = ns.Print
+    local bad = {}
+    for ev, ok in pairs(ns.eventStatus or {}) do if not ok then bad[#bad + 1] = ev end end
+    P(("report: version %s, build %s, in guild: %s, can invite: %s"):format(tostring(ns.VERSION),
+        tostring(ClientBuild()), tostring(IsInGuild()), tostring(IsInGuild() and CanGuildInvite())))
+    P(("enabled=%s phrase=%q matchAnywhere=%s confirm=%s cooldown=%s"):format(tostring(db.enabled), tostring(db.phrase),
+        tostring(db.matchAnywhere), tostring(db.confirm), tostring(db.cooldown)))
+    P(("learned: invites need a click=%s, chat needs a click=%s, one invite per click=%s; whispers seen this session: %d; waiting invites: %d"):format(
+        tostring(ns.InviteNeedsClick()), tostring(ns.ChatNeedsClick()), tostring(ns.OnePerClick()),
+        ns.whispersSeen or 0, #(ns.pendingInvites or {})))
+    P("events not registered: " .. (#bad > 0 and table.concat(bad, ", ") or "none"))
+    local t = db.trace or {}
+    P(("last %d of %d debug lines:"):format(math.min(n, #t), #t))
+    for i = math.max(1, #t - n + 1), #t do print("  " .. t[i]) end
+end
 
 ---------------------------------------------------------------------------
 -- Slash commands + addon compartment
@@ -851,6 +893,8 @@ SlashCmdList.GUILDIE = function(input)
     elseif cmd == "debug" then
         db.debug = not db.debug
         ns.Print("Debug " .. (db.debug and "|cff55ff55on|r: every whisper will be explained in chat." or "|cffff5555off|r"))
+    elseif cmd == "report" then
+        ns.Report(tonumber(rest) or 20)
     elseif cmd == "preview" then
         ns.Print("Preview: " .. ns.Fill(db.welcomeText, UnitName("player")))
     else
@@ -872,6 +916,7 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("/guildie welcome <text> - set the welcome message ({name}, {guild})")
         ns.Print("/guildie preview - preview the welcome message")
         ns.Print("/guildie debug - explain every whisper in chat (troubleshooting)")
+        ns.Print("/guildie report [lines] - what Guildie has learned about this game plus the latest debug lines")
     end
     ns.RefreshUI()
 end
