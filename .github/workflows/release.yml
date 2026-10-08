@@ -21,10 +21,18 @@ jobs:
           fetch-depth: 0
       - uses: BigWigsMods/packager@v2
 
-      - name: Post to Discord
+      - name: Update Discord
         if: success()
         continue-on-error: true
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          DISCORD_MODE: ${{ github.event_name == 'workflow_dispatch' && 'intro' || 'release' }}
-        run: bash .github/discord-notify.sh
+          DISCORD_MODE: ${{ github.event_name == 'workflow_dispatch' && 'sync' || 'release' }}
+        run: |
+          bash .github/discord-notify.sh
+          if [ "$DISCORD_MODE" = "sync" ] && [ -n "$(git status --porcelain .github/discord-message-id)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/discord-message-id
+            git commit -m "Remember Discord message id"
+            git push
+          fi
