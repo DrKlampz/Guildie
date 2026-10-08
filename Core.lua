@@ -255,7 +255,7 @@ end
 -- Inviting
 ---------------------------------------------------------------------------
 -- fromClick: called from a button the player clicked, so restricted calls are allowed.
--- Anything that needs the click (the reply whisper) has to happen right here, not on a timer.
+-- The reply whisper is sent only after the invite looks like it went through (see below).
 function ns.DoInvite(name, fromClick)
     ns.blockedAt = nil
     ns.lastInviteAt = GetTime()
@@ -266,32 +266,55 @@ function ns.DoInvite(name, fromClick)
         ns.Debug("  Invite call failed: " .. tostring(errInv))
         ns.blockedAt = GetTime()
     end
-    ns.invitedByMe[Key(name)] = GetTime()
+    local sentAt = GetTime()
+    ns.invitedByMe[Key(name)] = sentAt
+    ns.inviteFailed[Key(name)] = nil
     ns.StartRosterPoll()
-    if fromClick and db.replyEnabled then
-        ns.SendNow(ns.Fill(db.replyText, name), "WHISPER", name)
-    end
-    -- Give ADDON_ACTION_BLOCKED a moment to fire before we tell anyone it worked
+    -- The game gives no "invite sent" reply, so wait a few seconds for any sign of trouble
+    -- (a blocked call, an error message, a "declined / already in a guild" reply) before
+    -- counting the invite or telling the player it was sent.
     C_Timer.After(0.5, function()
         if ns.blockedAt then
             if fromClick then
                 ns.Log(name, "|cffff5555Invite blocked by the game|r")
-                ns.Print(("The game didn't confirm the invite to %s. Check /guildie debug on and try again."):format(name))
+                ns.Print(("The game didn't send the invite to %s. Check /guildie debug on and try again."):format(name))
+                ns.QueueInvite(name)
             else
                 -- don't drop the recruit: ask for the click the game wants
                 ns.QueueInvite(name)
             end
             return
         end
-        db.stats.invited = db.stats.invited + 1
-        ns.Log(name, "|cff55ff55Invited|r")
-        if fromClick then ns.Print("Invited " .. name .. ".") end
-        if db.replyEnabled and not fromClick then
-            ns.Say(ns.Fill(db.replyText, name), "WHISPER", name, function()
-                ns.Log(name, "|cffffaa00Reply whisper needs a click (game restriction)|r")
-            end)
-        end
+        C_Timer.After(3, function()
+            local k = Key(name)
+            local err = ns.lastUIError and ns.lastUIError.at >= sentAt and ns.lastUIError.text
+            if ns.inviteFailed[k] and ns.inviteFailed[k] >= sentAt then
+                ns.Debug("  invite to " .. name .. " failed: server reply")
+                return                       -- CheckInviteResult already logged why
+            end
+            if err then
+                ns.Debug("  invite to " .. name .. " failed: " .. tostring(err))
+                ns.Log(name, "|cffff5555Invite failed: " .. tostring(err) .. "|r")
+                ns.Print(("The invite to %s did not go through: %s"):format(name, tostring(err)))
+                return
+            end
+            db.stats.invited = db.stats.invited + 1
+            ns.Log(name, "|cff55ff55Invited|r")
+            ns.Debug("  invite to " .. name .. ": no error from the game, counting it as sent")
+            if fromClick then ns.Print("Invited " .. name .. ".") end
+            if db.replyEnabled then ns.SendReply(name) end
+        end)
     end)
+end
+
+function ns.SendReply(name)
+    local text = ns.Fill(db.replyText, name)
+    local function needClick()
+        ns.Log(name, "|cffffaa00Reply whisper waiting for your click|r")
+        if ns.ShowSendToast then ns.ShowSendToast("Whisper " .. ShortName(name) .. "?", text, "WHISPER", name) end
+    end
+    if ns.ChatNeedsClick() then needClick() return end
+    ns.Say(text, "WHISPER", name, needClick)
 end
 
 ---------------------------------------------------------------------------
@@ -301,6 +324,7 @@ end
 -- replies, puts the rest back in the queue, and goes one per click on this game build.
 ---------------------------------------------------------------------------
 ns.pendingInvites = {}
+ns.inviteFailed = {}            -- [key] = time the server refused an invite we sent
 ns.inviteAnswered = {}          -- [key] = time the server answered an invite we sent
 local INVITE_WAIT = 1800        -- a request is dropped after 30 minutes without a click
 
@@ -490,6 +514,7 @@ local function CheckInviteResult(msg)
             local k = Key(who)
             if ns.invitedByMe[k] then
                 ns.inviteAnswered[k] = GetTime()
+                if r.clear then ns.inviteFailed[k] = GetTime() end
                 ns.Debug("  server: " .. msg)
                 ns.Log(who, r.label)
                 if r.clear then
@@ -720,7 +745,7 @@ local f = CreateFrame("Frame")
 ns.eventStatus = {}
 for _, ev in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "CHAT_MSG_WHISPER", "CHAT_MSG_SYSTEM",
     "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN", "PLAYER_GUILD_UPDATE", "GUILD_ROSTER_UPDATE",
-    "CHAT_MSG_GUILD", "CHAT_MSG_WHISPER_INFORM" }) do
+    "CHAT_MSG_GUILD", "CHAT_MSG_WHISPER_INFORM", "UI_ERROR_MESSAGE" }) do
     local ok = pcall(f.RegisterEvent, f, ev)
     ns.eventStatus[ev] = ok and true or false
 end
@@ -794,6 +819,12 @@ f:SetScript("OnEvent", function(_, event, ...)
             ns.Debug("the game blocked " .. func .. " (" .. event .. ")")
         end
         ns.RefreshUI()
+    elseif event == "UI_ERROR_MESSAGE" then
+        local _, text = ...
+        if type(text) == "string" and not IsSecret(text) and next(ns.invitedByMe) then
+            ns.lastUIError = { text = text, at = GetTime() }
+            ns.Debug("ui error: " .. text)
+        end
     elseif event == "GUILD_ROSTER_UPDATE" then
         OnRoster()
         ns.RefreshUI()

@@ -141,6 +141,7 @@ local function CreateShell()
     f:SetWidth(WIDTH)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
+    f:SetToplevel(true)   -- clicking a window raises it (with all its contents) above the other
     f:SetClampedToScreen(true)
     f:SetMovable(true)
     f:EnableMouse(true)
