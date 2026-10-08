@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.9.4
+- Fix: after you clicked the popup, Guildie could say "The game didn't send the invite" and put the player back in the queue even though the invite had gone out and they joined. The game reports many unrelated blocked actions as UNKNOWN(), and Guildie was blaming the invite for them. Now only a block that names the invite counts as a failed invite; every blocked-action report is written to the log with its name.
+
 ## v1.9.3
 - `/guildie selftest`: sends two fake whispers through the real pipeline (phrase match, popup, stacking, your click) without inviting anyone, then prints PASS/FAIL for each step.
 

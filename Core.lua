@@ -259,13 +259,14 @@ end
 function ns.DoInvite(name, fromClick)
     if ns.IsSelfTest(name) then ns.SelfTestInvite(name, fromClick) return end
     ns.blockedAt = nil
+    ns.blockedNamed = nil
     ns.lastInviteAt = GetTime()
     local okInv, errInv = pcall(Invite, name)
     ns.Debug(("invite call for %s: fromClick=%s ok=%s%s"):format(tostring(name), tostring(fromClick and true or false),
         tostring(okInv), okInv and "" or (" err=" .. tostring(errInv))))
     if not okInv then
         ns.Debug("  Invite call failed: " .. tostring(errInv))
-        ns.blockedAt = GetTime()
+        ns.blockedAt = GetTime() ns.blockedNamed = true
     end
     local sentAt = GetTime()
     ns.invitedByMe[Key(name)] = sentAt
@@ -275,7 +276,9 @@ function ns.DoInvite(name, fromClick)
     -- (a blocked call, an error message, a "declined / already in a guild" reply) before
     -- counting the invite or telling the player it was sent.
     C_Timer.After(0.5, function()
-        if ns.blockedAt then
+        -- Only a block that names the invite counts as the invite failing. The game often reports
+        -- UNKNOWN() for whatever else Guildie did in the same moment, and that is not proof.
+        if ns.blockedAt and ns.blockedNamed then
             if fromClick then
                 ns.Log(name, "|cffff5555Invite blocked by the game|r")
                 ns.Print(("The game didn't send the invite to %s. Check /guildie debug on and try again."):format(name))
@@ -301,7 +304,8 @@ function ns.DoInvite(name, fromClick)
             end
             db.stats.invited = db.stats.invited + 1
             ns.Log(name, "|cff55ff55Invited|r")
-            ns.Debug("  invite to " .. name .. ": no error from the game, counting it as sent")
+            ns.Debug("  invite to " .. name .. ": no error from the game, counting it as sent"
+                .. ((ns.blockedAt and not ns.blockedNamed) and " (an unnamed blocked action was reported at the same time; ignored)" or ""))
             if fromClick then ns.Print("Invited " .. name .. ".") end
             if db.replyEnabled then ns.SendReply(name) end
         end)
@@ -864,6 +868,8 @@ f:SetScript("OnEvent", function(_, event, ...)
         local addon, func = ...
         if addon ~= ADDON_NAME then return end
         func = tostring(func or "")
+        ns.Debug(("blocked action reported: %s (%s), %.1fs after our last invite, %.1fs after our last chat")
+            :format(func, tostring(event), GetTime() - (ns.lastInviteAt or -100), GetTime() - (ns.lastChatAt or -100)))
         -- The game often reports the blocked function as UNKNOWN(). Go by its name when we get
         -- one, otherwise by whatever we tried a moment ago.
         local now = GetTime()
@@ -877,6 +883,7 @@ f:SetScript("OnEvent", function(_, event, ...)
         end
         if kind == "invite" then
             ns.blockedAt = GetTime()
+            ns.blockedNamed = func:find("Invite") ~= nil
             if not ns.InviteNeedsClick() then
                 db.inviteNeedsClick = ClientBuild()
                 ns.Print("Forever requires a click to send guild invites, so Guildie will show a popup for each one. Your settings are unchanged.")
