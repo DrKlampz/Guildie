@@ -256,14 +256,20 @@ end
 ---------------------------------------------------------------------------
 -- fromClick: called from a button the player clicked, so restricted calls are allowed.
 -- The reply whisper is sent only after the invite looks like it went through (see below).
-function ns.DoInvite(name, fromClick)
+function ns.DoInvite(name, fromClick, viaMacro)
     if ns.IsSelfTest(name) then ns.SelfTestInvite(name, fromClick) return end
     ns.blockedAt = nil
     ns.blockedNamed = nil
     ns.lastInviteAt = GetTime()
-    local okInv, errInv = pcall(Invite, name)
-    ns.Debug(("invite call for %s: fromClick=%s ok=%s%s"):format(tostring(name), tostring(fromClick and true or false),
-        tostring(okInv), okInv and "" or (" err=" .. tostring(errInv))))
+    local okInv, errInv = true, nil
+    if viaMacro then
+        -- the popup button itself ran "/ginvite Name" as a secure macro; nothing to call here
+        ns.Debug("invite for " .. tostring(name) .. ": sent by the popup's secure button (/ginvite)")
+    else
+        okInv, errInv = pcall(Invite, name)
+        ns.Debug(("invite call for %s: fromClick=%s ok=%s%s"):format(tostring(name), tostring(fromClick and true or false),
+            tostring(okInv), okInv and "" or (" err=" .. tostring(errInv))))
+    end
     if not okInv then
         ns.Debug("  Invite call failed: " .. tostring(errInv))
         ns.blockedAt = GetTime() ns.blockedNamed = true
@@ -437,17 +443,24 @@ function ns.OnePerClick()
 end
 
 -- Runs from the popup's button: a real click, or the key from /guildie bind.
-function ns.SendQueuedInvites()
+-- The people the next click will invite (the popup's secure button uses the same list).
+function ns.InviteBatch()
+    local list = ns.PendingInvites()
+    if #list == 0 then return list end
+    return ns.OnePerClick() and { list[1] } or list
+end
+
+function ns.SendQueuedInvites(viaMacro)
     local list = ns.PendingInvites()
     if #list == 0 then return 0 end
-    local batch = ns.OnePerClick() and { list[1] } or list
+    local batch = ns.InviteBatch()
     ns.Debug(("popup click: %d waiting, sending %d invite(s) (one per click: %s)"):format(#list, #batch, tostring(ns.OnePerClick())))
     local inBatch, rest = {}, {}
     for _, p in ipairs(batch) do inBatch[p.key] = true end
     for _, p in ipairs(list) do if not inBatch[p.key] then rest[#rest + 1] = p end end
     ns.pendingInvites = rest
     local sentAt = GetTime()
-    for _, p in ipairs(batch) do ns.DoInvite(p.name, true) end
+    for _, p in ipairs(batch) do ns.DoInvite(p.name, true, viaMacro) end
     if #batch > 1 then
         -- which invites did the server actually get?
         C_Timer.After(3, function()

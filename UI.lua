@@ -295,6 +295,29 @@ end
 ---------------------------------------------------------------------------
 local toast, toastQueue = nil, {}
 
+-- Point the secure Send button at "/ginvite <name>" lines for the people the next click invites.
+-- Attributes can't change in combat; then the click falls back to Guildie calling the invite itself.
+function ns.DisarmInviteButton(t)
+    t.macroSet = false
+    if InCombatLockdown() then return end
+    t.send:SetAttribute("type", nil)
+    t.send:SetAttribute("macrotext", nil)
+end
+
+function ns.ArmInviteButton(t)
+    ns.DisarmInviteButton(t)
+    if InCombatLockdown() then return end
+    local lines = {}
+    for _, p in ipairs(ns.InviteBatch()) do
+        if ns.IsSelfTest(p.name) then return end          -- a dry run never invites anyone
+        lines[#lines + 1] = "/ginvite " .. p.name
+    end
+    if #lines == 0 then return end
+    t.send:SetAttribute("type", "macro")
+    t.send:SetAttribute("macrotext", table.concat(lines, "\n"))
+    t.macroSet = true
+end
+
 local function ShowNextToast()
     if toast and toast:IsShown() then return end
     local item = table.remove(toastQueue, 1)
@@ -328,17 +351,21 @@ local function ShowNextToast()
         toast.hint:SetPoint("BOTTOMLEFT", 12, 14)
         -- Named so a key can be bound to it (/guildie bind). A key press counts as the real input
         -- the game wants, exactly like a click. With no popup showing, pressing it does nothing.
-        local send = CreateFrame("Button", "GuildieToastSend", toast, "UIPanelButtonTemplate")
+        -- A secure button: for invites it runs "/ginvite Name" itself, because Forever blocks addon
+        -- code from calling the invite function even on a real click, while a secure macro is allowed.
+        local send = CreateFrame("Button", "GuildieToastSend", toast, "SecureActionButtonTemplate,UIPanelButtonTemplate")
+        send:RegisterForClicks("AnyUp")
         send:SetSize(90, 22)
         send:SetPoint("BOTTOMRIGHT", -10, 10)
         send:SetText("Send")
-        send:SetScript("OnClick", function()
+        send:HookScript("PostClick", function()
             local it = toast.item
             if not it or not toast:IsShown() then return end
+            local viaMacro = it.kind == "invite" and toast.macroSet and true or false
             toast.item = nil
             toast:Hide()
             if it.kind == "invite" then
-                if ns.SendQueuedInvites() == 0 then
+                if ns.SendQueuedInvites(viaMacro) == 0 then
                     ns.Print("Those invite requests have expired. Ask them to whisper the invite phrase again.")
                 end
                 if #ns.PendingInvites() > 0 then table.insert(toastQueue, 1, { kind = "invite" }) end
@@ -378,6 +405,7 @@ local function ShowNextToast()
         local label = (#list == 1 and "Invite") or (ns.OnePerClick() and ("Invite next (" .. #list .. ")")) or ("Invite all (" .. #list .. ")")
         toast.send:SetText(label)
         toast.send:SetWidth(math.max(90, 18 + 7 * #label))
+        ns.ArmInviteButton(toast)
         local key = ns.SendKey()
         toast.hint:SetText(key and ("Press |cffffd100" .. key .. "|r to invite") or "Tip: /guildie bind F  invites with a key")
         toast:Show()
@@ -386,6 +414,7 @@ local function ShowNextToast()
     end
     toast.send:SetText("Send")
     toast.send:SetWidth(90)
+    ns.DisarmInviteButton(toast)
     toast.title:SetText("|cff33ff99Guildie:|r " .. item.title)
     toast.msg:SetText("|cff40ff40[" .. item.chan:sub(1, 1) .. item.chan:sub(2):lower() .. "]|r " .. item.text)
     local key = ns.SendKey()
