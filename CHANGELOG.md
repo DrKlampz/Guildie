@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.9.3
+- `/guildie selftest`: sends two fake whispers through the real pipeline (phrase match, popup, stacking, your click) without inviting anyone, then prints PASS/FAIL for each step.
+
 ## v1.9.2
 - The "Invite sent!" reply whisper and the Invited counter now wait a few seconds and only happen if the game gave no sign of trouble: a blocked call, an error message (shown in chat and the activity log), or a decline / already-in-a-guild reply. A blocked invite goes back to the popup instead of being reported as sent.
 - The options window and the Armory window now stack properly: clicking one brings the whole window forward instead of the two bleeding through each other.

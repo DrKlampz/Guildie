@@ -257,6 +257,7 @@ end
 -- fromClick: called from a button the player clicked, so restricted calls are allowed.
 -- The reply whisper is sent only after the invite looks like it went through (see below).
 function ns.DoInvite(name, fromClick)
+    if ns.IsSelfTest(name) then ns.SelfTestInvite(name, fromClick) return end
     ns.blockedAt = nil
     ns.lastInviteAt = GetTime()
     local okInv, errInv = pcall(Invite, name)
@@ -315,6 +316,78 @@ function ns.SendReply(name)
     end
     if ns.ChatNeedsClick() then needClick() return end
     ns.Say(text, "WHISPER", name, needClick)
+end
+
+---------------------------------------------------------------------------
+-- /guildie selftest: runs two fake whispers through the real pipeline (phrase match, queue,
+-- popup, your click) without inviting anyone, then reports each step.
+---------------------------------------------------------------------------
+local selfTest
+function ns.IsSelfTest(name)
+    return selfTest ~= nil and type(name) == "string" and name:find("^Selftest ") ~= nil
+end
+
+local function STReport()
+    if not selfTest or selfTest.reported then return end
+    selfTest.reported = true
+    local function line(ok, text) ns.Print((ok and "|cff55ff55PASS|r " or "|cffff5555FAIL|r ") .. text) end
+    local st = selfTest
+    ns.Print("|cffd9a441Self-test results|r (nobody was invited)")
+    line(st.settings, "settings: auto-invite on, phrase set, in a guild with invite rights")
+    line(st.matched, "whispers containing the phrase were recognised")
+    if ns.InviteNeedsClick() or db.confirm then
+        line(st.queued == 2, ("both whispers queued for the popup (%d of 2)"):format(st.queued))
+        line(st.popup, "the invite popup appeared at the top of the screen")
+        line(st.clicked > 0, st.clicked > 0 and ("your click reached the invite step for %d player(s) in one click%s"):format(st.clicked,
+            (st.clicked < 2 and ns.OnePerClick()) and " (this game build allows one invite per click, so the second stays queued)" or "")
+            or "no click reached the invite step - the popup was never clicked within a minute")
+    else
+        line(st.auto == 2, ("automatic invites reached the invite step for %d of 2 whispers"):format(st.auto))
+    end
+    ns.Print(("Still only provable live: whether the game accepts the real invite and chat. Learned so far -> invite needs a click: %s, chat needs a click: %s.")
+        :format(tostring(ns.InviteNeedsClick()), tostring(ns.ChatNeedsClick())))
+    -- clean up the fakes
+    local keep = {}
+    for _, p in ipairs(ns.pendingInvites) do if not ns.IsSelfTest(p.name) then keep[#keep + 1] = p end end
+    ns.pendingInvites = keep
+    if ns.RefreshInviteToast then ns.RefreshInviteToast() end
+    selfTest = nil
+end
+
+function ns.SelfTestInvite(name, fromClick)
+    if fromClick then selfTest.clicked = selfTest.clicked + 1 else selfTest.auto = selfTest.auto + 1 end
+    ns.Debug(("selftest: invite step reached for %s (fromClick=%s) - dry run, GuildInvite not called"):format(name, tostring(fromClick and true or false)))
+    if fromClick then
+        C_Timer.After(0.5, STReport)
+    elseif selfTest.auto >= 2 then
+        C_Timer.After(0.5, STReport)
+    end
+end
+
+function ns.SelfTest()
+    if selfTest then ns.Print("A self-test is already running.") return end
+    selfTest = { settings = false, matched = false, queued = 0, popup = false, clicked = 0, auto = 0 }
+    local phrase = Trim(tostring(db.phrase or "")):lower()
+    selfTest.settings = db.enabled and phrase ~= "" and IsInGuild() and CanGuildInvite() and true or false
+    if not selfTest.settings then
+        STReport()
+        return
+    end
+    ns.Print("Self-test: sending two fake whispers (\"Selftest One\", \"Selftest Two\") through Guildie...")
+    for _, who in ipairs({ "Selftest One", "Selftest Two" }) do
+        lastSeen[Key(who)] = nil
+        ns.InjectWhisper(db.phrase, who)
+    end
+    for _, p in ipairs(ns.pendingInvites) do if ns.IsSelfTest(p.name) then selfTest.queued = selfTest.queued + 1 end end
+    selfTest.matched = (selfTest.queued == 2) or (selfTest.auto == 2)
+    C_Timer.After(0.3, function()
+        local t = _G.GuildieToast
+        selfTest.popup = (t and t:IsShown()) and true or false
+        if ns.InviteNeedsClick() or db.confirm then
+            ns.Print("Click |cff33ff99Send|r on the popup (or press your bound key) to finish the test.")
+        end
+    end)
+    C_Timer.After(60, STReport)
 end
 
 ---------------------------------------------------------------------------
@@ -485,6 +558,8 @@ OnWhisper = function(msg, sender, lineID)
         ns.DoInvite(sender)
     end
 end
+
+function ns.InjectWhisper(msg, who) return OnWhisper(msg, who) end
 
 -- Server replies to our invites, so the log shows what actually happened
 local function BuildPattern(fmt)
@@ -924,6 +999,8 @@ SlashCmdList.GUILDIE = function(input)
     elseif cmd == "debug" then
         db.debug = not db.debug
         ns.Print("Debug " .. (db.debug and "|cff55ff55on|r: every whisper will be explained in chat." or "|cffff5555off|r"))
+    elseif cmd == "selftest" then
+        ns.SelfTest()
     elseif cmd == "report" then
         ns.Report(tonumber(rest) or 20)
     elseif cmd == "preview" then
