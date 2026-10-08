@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -19,3 +20,11 @@ jobs:
         with:
           fetch-depth: 0
       - uses: BigWigsMods/packager@v2
+
+      - name: Post to Discord
+        if: success()
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_MODE: ${{ github.event_name == 'workflow_dispatch' && 'intro' || 'release' }}
+        run: bash .github/discord-notify.sh
