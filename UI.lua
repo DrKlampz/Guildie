@@ -337,7 +337,9 @@ local function ShowNextToast()
             toast.item = nil
             toast:Hide()
             if it.kind == "invite" then
-                ns.SendQueuedInvites()
+                if ns.SendQueuedInvites() == 0 then
+                    ns.Print("Those invite requests have expired. Ask them to whisper the invite phrase again.")
+                end
                 if #ns.PendingInvites() > 0 then table.insert(toastQueue, 1, { kind = "invite" }) end
                 ShowNextToast()
                 return
@@ -473,6 +475,10 @@ function ns.ShowInviteToast()
     for _, it in ipairs(toastQueue) do if it.kind == "invite" then return end end
     table.insert(toastQueue, 1, { kind = "invite" })
     ShowNextToast()
+end
+
+function ns.RefreshInviteToast()
+    if toast and toast:IsShown() and toast.item and toast.item.kind == "invite" then ns.ShowInviteToast() end
 end
 
 function ns.ShowSendToast(title, text, chan, target, onSent, lines)

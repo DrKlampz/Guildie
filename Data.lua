@@ -46,6 +46,9 @@ function ns.GuildData()
     d.members = d.members or {}  -- [memberKey] = true: who was in the guild at the last check
     d.ignore = d.ignore or {}    -- inactive-list ignores
     d.annAnnounced = d.annAnnounced or {}  -- [memberKey] = years last announced, so it fires once
+    d.join = d.join or {}        -- [memberKey] = { ts, src, by, at }: when they joined the guild
+    d.bday = d.bday or {}        -- [memberKey] = { m, d }: birthday, shared by the player
+    d.bdayAnnounced = d.bdayAnnounced or {}  -- [memberKey] = year last announced
     d.tz = d.tz or {}            -- [memberKey] = { offset = hours from UTC, label = "EST", time = }
     return d
 end

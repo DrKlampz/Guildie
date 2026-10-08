@@ -103,6 +103,18 @@ local function ShownGold(rec)
     return rec and rec.gold and (rec.source == "self" or not Hidden(rec, "M")) and rec.gold or nil
 end
 
+-- Combined gold of one player's linked characters. Only characters whose gold is shared (or
+-- yours) count; "shared" is how many of the "size" characters that was.
+local function GroupGold(key, data)
+    local group = ns.Alts and ns.Alts.GroupOf(key) or { key }
+    local total, shared = 0, 0
+    for _, k in ipairs(group) do
+        local g = ShownGold(data[k])
+        if g then total = total + g shared = shared + 1 end
+    end
+    return total, shared, #group
+end
+
 local InsertLink = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_InsertLink
 
 ---------------------------------------------------------------------------
@@ -172,10 +184,22 @@ local function BuildEntries()
             end
         end
         if ns.db.groupAlts ~= false and q == "" then
+            -- the main's row stands for the whole group, so it shows everyone's gold added up
+            for _, e in ipairs(entries) do
+                if e.mainKey == e.key and e.altCount > 0 then
+                    local total, shared, size = GroupGold(e.key, data)
+                    if shared > 0 then
+                        e.rowGold, e.goldPartial = total, shared < size
+                    end
+                end
+            end
             for i = #entries, 1, -1 do
                 if entries[i].mainKey ~= entries[i].key then table.remove(entries, i) end
             end
         end
+    end
+    for _, e in ipairs(entries) do
+        if e.rowGold == nil then e.rowGold = ShownGold(e.rec) end
     end
     -- Column sort. Missing values (no data, gold not shared) always sink to the bottom.
     local function val(e)
@@ -183,7 +207,7 @@ local function BuildEntries()
         elseif sortBy == "class" then return ClassName(e.class):lower()
         elseif sortBy == "level" then return e.level
         elseif sortBy == "ilvl" then return e.rec and e.rec.ilvl
-        elseif sortBy == "gold" then return ShownGold(e.rec)
+        elseif sortBy == "gold" then return e.rowGold
         elseif sortBy == "seen" then
             if e.gone then return nil end
             return e.online and -1 or e.lastOnline   -- smaller = more recently online
@@ -210,6 +234,7 @@ local function ShowDetail(e)
         d.title:SetText("Select a guild member")
         d.sub:SetText("")
         d.updated:SetText("")
+        d.total:SetText("")
     else
         d.title:SetText("|c" .. ClassHex(e.class) .. e.name .. "|r")
         local rec = e.rec
@@ -221,6 +246,14 @@ local function ShowDetail(e)
         end
         d.sub:SetText(("Level %s %s%s%s"):format(e.level or "?", cls,
             (rec and rec.ilvl and rec.ilvl > 0) and ("   |cffffd100Item level " .. rec.ilvl .. "|r") or "", gold))
+        if ns.Alts and #ns.Alts.GroupOf(e.key) > 1 then
+            local total, shared, size = GroupGold(e.key, A.GuildTable() or {})
+            if shared > 0 then
+                local t = "|cff55ccffAll characters|r  " .. GoldText(total)
+                if shared < size then t = t .. "\n|cff888888" .. shared .. " of " .. size .. " share their gold|r" end
+                d.total:SetText(t)
+            else d.total:SetText("") end
+        else d.total:SetText("") end
         if rec then
             local how = rec.source == "self" and "you" or rec.source == "inspect" and "your inspect" or "their Guildie"
             local note = ""
@@ -338,8 +371,8 @@ local function RefreshList()
             row.level:SetText(e.level or "")
             local il = e.rec and e.rec.ilvl
             row.ilvl:SetText((il and il > 0) and ("|cffffd100" .. il .. "|r") or "|cff555555-|r")
-            local g = ShownGold(e.rec)
-            row.gold:SetText(g and GoldShort(g) or "|cff555555-|r")
+            local g = e.rowGold
+            row.gold:SetText(g and (GoldShort(g) .. (e.goldPartial and "|cff888888*|r" or "")) or "|cff555555-|r")
             row.seen:SetText(SeenText(e))
             row.sel:SetShown(e.key == selected)
             row:Show()
@@ -545,6 +578,10 @@ local function Build()
     f.detail = d
     d.title = Label(d, "GameFontNormalLarge")
     d.title:SetPoint("TOPLEFT", 0, 0)
+    -- combined gold of all of a player's characters, kept inside the panel's right edge
+    d.total = Label(d, "GameFontHighlightSmall")
+    d.total:SetPoint("TOPRIGHT", d, "TOPRIGHT", 0, -1)
+    d.total:SetJustifyH("RIGHT")
     d.sub = Label(d, "GameFontHighlight")
     d.sub:SetPoint("TOPLEFT", d.title, "BOTTOMLEFT", 0, -4)
     d.updated = Label(d, "GameFontHighlightSmall")

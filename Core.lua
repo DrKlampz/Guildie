@@ -25,6 +25,8 @@ ns.DEFAULTS = {
     minimapShow    = true,
     minimapAngle   = 200,
     -- Anniversaries
+    birthdayEnabled    = true,
+    birthdayText       = "|cff33ff99Guildie:|r happy birthday, {name}!",
     anniversaryEnabled = true,
     anniversaryText    = "|cff33ff99Guildie:|r everyone congratulate {name} on {years} year(s) in {guild}!",
     -- Recruit welcome kit: up to three whispers sent to new recruits
@@ -250,7 +252,11 @@ end
 function ns.DoInvite(name, fromClick)
     ns.blockedAt = nil
     ns.lastInviteAt = GetTime()
-    Invite(name)
+    local okInv, errInv = pcall(Invite, name)
+    if not okInv then
+        ns.Debug("  Invite call failed: " .. tostring(errInv))
+        ns.blockedAt = GetTime()
+    end
     ns.invitedByMe[Key(name)] = GetTime()
     ns.StartRosterPoll()
     if fromClick and db.replyEnabled then
@@ -261,6 +267,7 @@ function ns.DoInvite(name, fromClick)
         if ns.blockedAt then
             if fromClick then
                 ns.Log(name, "|cffff5555Invite blocked by the game|r")
+                ns.Print(("The game didn't confirm the invite to %s. Check /guildie debug on and try again."):format(name))
             else
                 -- don't drop the recruit: ask for the click the game wants
                 ns.QueueInvite(name)
@@ -269,6 +276,7 @@ function ns.DoInvite(name, fromClick)
         end
         db.stats.invited = db.stats.invited + 1
         ns.Log(name, "|cff55ff55Invited|r")
+        if fromClick then ns.Print("Invited " .. name .. ".") end
         if db.replyEnabled and not fromClick then
             ns.Say(ns.Fill(db.replyText, name), "WHISPER", name, function()
                 ns.Log(name, "|cffffaa00Reply whisper needs a click (game restriction)|r")
@@ -285,7 +293,7 @@ end
 ---------------------------------------------------------------------------
 ns.pendingInvites = {}
 ns.inviteAnswered = {}          -- [key] = time the server answered an invite we sent
-local INVITE_WAIT = 300         -- a request is dropped after 5 minutes without a click
+local INVITE_WAIT = 1800        -- a request is dropped after 30 minutes without a click
 
 function ns.QueueInvite(name)
     local k = Key(name)
@@ -293,6 +301,11 @@ function ns.QueueInvite(name)
     ns.pendingInvites[#ns.pendingInvites + 1] = { name = name, key = k, at = GetTime() }
     ns.Log(name, "|cffffaa00Waiting for your click to invite|r")
     if ns.ShowInviteToast then ns.ShowInviteToast() end
+    -- refresh the popup when this request would expire, so a stale name never lingers
+    C_Timer.After(INVITE_WAIT + 1, function()
+        ns.PendingInvites()
+        if ns.RefreshInviteToast then ns.RefreshInviteToast() end
+    end)
 end
 
 function ns.PendingInvites()
@@ -301,7 +314,7 @@ function ns.PendingInvites()
         if now - p.at < INVITE_WAIT then
             keep[#keep + 1] = p
         else
-            ns.Log(p.name, "|cff888888Invite request expired (no click within 5 minutes)|r")
+            ns.Log(p.name, "|cff888888Invite request expired (no click within 30 minutes)|r")
         end
     end
     ns.pendingInvites = keep
@@ -796,8 +809,12 @@ SlashCmdList.GUILDIE = function(input)
         ns.Armory.SyncTest()
     elseif cmd == "testwelcome" then
         ns.TestWelcome()
-    elseif cmd == "anniversaries" then
+    elseif cmd == "anniversaries" or cmd == "dates" then
         if ns.OpenArmoryTab then ns.OpenArmoryTab("anniversaries") end
+    elseif cmd == "joined" then
+        if ns.Dates then ns.Dates.SlashJoined(rest) end
+    elseif cmd == "birthday" or cmd == "bday" then
+        if ns.Dates then ns.Dates.SlashBirthday(rest) end
     elseif cmd == "timezone" or cmd == "tz" then
         if rest:lower():match("^clear") then
             if ns.Timezones then ns.Timezones.Clear() end
@@ -805,6 +822,8 @@ SlashCmdList.GUILDIE = function(input)
             local off, label = rest:match("^(%S+)%s*(.*)$")
             if ns.Timezones then ns.Timezones.Set(off, label) end
         end
+    elseif cmd == "zone" or cmd == "where" then
+        if ns.Zone then ns.Zone.Command(rest) end
     elseif cmd == "schedule" then
         if ns.OpenArmoryTab then ns.OpenArmoryTab("schedule") end
     elseif cmd == "bind" then
@@ -843,6 +862,8 @@ SlashCmdList.GUILDIE = function(input)
         ns.Print("/guildie bind <key> - press a key to send the welcome popup (/guildie unbind to remove)")
         ns.Print("/guildie words [reset] - show or reset the gamer word counter")
         ns.Print("/guildie crafters | recruits | loot | schedule | anniversaries - open that Armory tab")
+        ns.Print("/guildie zone - who's in your zone and who has quests there (share on|off, alerts on|off)")
+        ns.Print("/guildie joined [date] | birthday [month/day] - set your guild join date and birthday (shared with the guild)")
         ns.Print("/guildie timezone <offset> [label] - share your time zone for raid scheduling (/guildie timezone clear to remove)")
         ns.Print("/guildie alts [link|unlink] - see and share which characters are yours; /guildie main <name> picks your main")
         ns.Print("/guildie recipes probe - check that the game shares recipes")

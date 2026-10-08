@@ -14,6 +14,10 @@ Built for **WoW: Forever**.
 - **Spam protection:** per-player cooldown.
 - **Confirm mode:** approve each invite with a popup. Guildie switches to this by itself if the game ever blocks automatic invites.
 - **Activity log and stats** right in the settings window.
+- **Guild Armory** (`/guildie armory`): gear, talents, professions and gold of guildmates who run Guildie, with alts grouped under their main and their gold added up.
+- **Zone tab** (`/guildie zone`): who's in your zone and who else has quests from it.
+- **Dates tab:** join dates and birthdays, logged and shared automatically, with anniversary and birthday shout-outs.
+- Crafters, recruit tracking, loot help and a raid-time schedule.
 
 ## How to use
 
@@ -26,6 +30,9 @@ Open settings with `/guildie`, the AddOns button next to the minimap, or **Optio
 | `/guildie phrase <text>` | Set the invite phrase |
 | `/guildie welcome <text>` | Set the welcome message |
 | `/guildie preview` | Preview the welcome in your chat |
+| `/guildie zone` | Who's here and who has quests here |
+| `/guildie joined <date>` | Set your guild join date |
+| `/guildie birthday <month/day>` | Set your birthday |
 
 Your guild rank needs permission to invite.
 

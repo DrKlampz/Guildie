@@ -21,8 +21,10 @@ Recipes.lua
 Recruits.lua
 Loot.lua
 LootUI.lua
+Dates.lua
 Anniversaries.lua
 Timezones.lua
+Zone.lua
 UI.lua
 ArmoryUI.lua
 Minimap.lua
