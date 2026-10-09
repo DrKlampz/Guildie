@@ -139,7 +139,9 @@ end
 -- build, so a Forever patch that loosens the rule gets re-tested automatically.
 local function ClientBuild() return tostring((select(2, GetBuildInfo()))) end
 function ns.InviteNeedsClick()
-    return ns.db and ns.db.inviteNeedsClick ~= nil and ns.db.inviteNeedsClick == ClientBuild()
+    -- Always. The game reports a blocked action every time addon code calls the invite function,
+    -- on every build, so the only invite that works is the popup's secure button (/ginvite).
+    return true
 end
 
 -- Same for chat: once the game has blocked an automatic chat message, remember that for this
