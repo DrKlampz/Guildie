@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.9.5
+- Fix: invites that Guildie said it sent but never went out. The game blocks addon code from sending a guild invite, even from a button (the red "Interface action failed because of an AddOn" message). Now the popup's Invite button types `/ginvite Name` into your chat box and you press Enter, which the game allows. Guildie only says "Invited" and sends the welcome and reply after you press Enter on that command. Other chat lines are ignored. If you don't press Enter within 45 seconds, the popup comes back.
+
 ## v1.9.4
 - Fix: after you clicked the popup, Guildie could say "The game didn't send the invite" and put the player back in the queue even though the invite had gone out and they joined. The game reports many unrelated blocked actions as UNKNOWN(), and Guildie was blaming the invite for them. Now only a block that names the invite counts as a failed invite; every blocked-action report is written to the log with its name.
 
