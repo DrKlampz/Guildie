@@ -12,8 +12,12 @@ Built for **WoW: Forever**.
 - **No double welcomes:** by default Guildie only welcomes players it invited, so several officers can run it at once.
 - **Reply whisper:** optionally tell the player their invite is on the way.
 - **Spam protection:** per-player cooldown.
-- **Confirm mode:** approve each invite with a popup. Guildie switches to this by itself if the game ever blocks automatic invites.
+- **Confirm mode:** the game blocks addons from sending guild invites on their own, so Guildie shows a popup; its Invite button puts `/ginvite Name` in your chat box and you press **Enter** to send it. Guildie only marks the player as invited once that command goes out.
 - **Activity log and stats** right in the settings window.
+- **Guild Armory** (`/guildie armory`): gear, talents, professions and gold of guildmates who run Guildie, with alts grouped under their main and their gold added up.
+- **Zone tab** (`/guildie zone`): who's in your zone and who else has quests from it.
+- **Dates tab:** join dates and birthdays, logged and shared automatically, with anniversary and birthday shout-outs.
+- Crafters, recruit tracking, loot help and a raid-time schedule.
 
 ## How to use
 
