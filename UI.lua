@@ -362,6 +362,11 @@ local function ShowNextToast()
             local it = toast.item
             if not it or not toast:IsShown() then return end
             local viaMacro = it.kind == "invite" and toast.macroSet and true or false
+            if it.kind == "invite" then
+                ns.Debug(("popup button: secure macro armed=%s type=%s text=%s combat=%s"):format(tostring(viaMacro),
+                    tostring(toast.send:GetAttribute("type")), tostring(toast.send:GetAttribute("macrotext")):gsub("\n", " | "),
+                    tostring(InCombatLockdown() and true or false)))
+            end
             toast.item = nil
             toast:Hide()
             if it.kind == "invite" then
