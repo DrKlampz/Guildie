@@ -452,6 +452,59 @@ function ns.InviteBatch()
     return ns.OnePerClick() and { list[1] } or list
 end
 
+-- Click on the popup: put "/ginvite Name" in the chat box. Pressing Enter runs it as a normal
+-- typed command, which the game allows; Guildie notices it was sent (see the hooks below).
+ns.awaiting = nil
+function ns.PrefillInvite()
+    local list = ns.PendingInvites()
+    local p = list[1]
+    if not p then return 0 end
+    local aw = { key = p.key, name = p.name, at = GetTime() }
+    ns.awaiting = aw
+    local text = "/ginvite " .. p.name
+    ns.Debug("popup click: putting \"" .. text .. "\" in the chat box; waiting for Enter")
+    if ChatFrame_OpenChat then ChatFrame_OpenChat(text, DEFAULT_CHAT_FRAME) end
+    ns.Print(("Press |cff33ff99Enter|r to invite %s."):format(ShortName(p.name)))
+    C_Timer.After(45, function()
+        if ns.awaiting == aw then
+            ns.awaiting = nil
+            ns.Debug("no Enter pressed for " .. p.name .. " within 45s")
+            if #ns.PendingInvites() > 0 and ns.ShowInviteToast then ns.ShowInviteToast() end
+        end
+    end)
+    return 1
+end
+
+-- Called with the text of a chat line the moment Enter is pressed.
+function ns.OnChatLine(text)
+    local aw = ns.awaiting
+    if not aw or type(text) ~= "string" then return end
+    local who = text:match("^/ginvite%s+(.-)%s*$") or text:match("^/guildinvite%s+(.-)%s*$")
+    if not who or Key(who) ~= aw.key then return end
+    ns.awaiting = nil
+    local keep = {}
+    for _, p in ipairs(ns.pendingInvites) do if p.key ~= aw.key then keep[#keep + 1] = p end end
+    ns.pendingInvites = keep
+    ns.Debug("Enter pressed: " .. text .. " (sent by you, not by the addon)")
+    ns.DoInvite(aw.name, true, true)
+    if #ns.PendingInvites() > 0 and ns.ShowInviteToast then ns.ShowInviteToast() end
+end
+
+function ns.HookChatBoxes()
+    if ns.chatHooked then return end
+    ns.chatHooked = true
+    for i = 1, (NUM_CHAT_WINDOWS or 10) do
+        local eb = _G["ChatFrame" .. i .. "EditBox"]
+        if eb and eb.HookScript then
+            eb:HookScript("OnTextChanged", function(self)
+                local t = self:GetText()
+                if t and t ~= "" then ns.lastEditText = t end
+            end)
+            eb:HookScript("OnEnterPressed", function() local t = ns.lastEditText ns.lastEditText = nil if t then ns.OnChatLine(t) end end)
+        end
+    end
+end
+
 function ns.SendQueuedInvites(viaMacro)
     local list = ns.PendingInvites()
     if #list == 0 then return 0 end
@@ -861,6 +914,7 @@ f:SetScript("OnEvent", function(_, event, ...)
             tostring(ns.VERSION), tostring(ClientBuild()), #bad > 0 and table.concat(bad, ",") or "none",
             tostring(db.enabled), tostring(db.phrase)))
         if ns.RegisterSettings then ns.RegisterSettings() end
+        pcall(ns.HookChatBoxes)
         if RequestRoster then pcall(RequestRoster) end
     elseif event == "CHAT_MSG_WHISPER" then
         local msg, sender = ...
