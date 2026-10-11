@@ -66,9 +66,101 @@ local function BgStyles()
         gradient  = { m .. "Tex_Gradient", false, 0 },
     }
 end
-local FONTS = { default = "Original", frizqt = "Standard", arial = "Narrow (Arial)", morpheus = "Fancy (Morpheus)", skurri = "Rough (Skurri)" }
-local FONT_PATH = { frizqt = "Fonts\\FRIZQT__.TTF", arial = "Fonts\\ARIALN.TTF", morpheus = "Fonts\\MORPHEUS.TTF", skurri = "Fonts\\SKURRI.TTF" }
-local FONT_ORDER = { "default", "frizqt", "arial", "morpheus", "skurri" }
+-- fonts: the game's own, a bundled pack (the LookFonts add-on, if it is installed), and any SharedMedia fonts
+local PACK = "Interface\\AddOns\\LookFonts\\Fonts\\"
+local FONT_DEFS = {
+    { "frizqt", "Friz Quadrata (game standard)", "Fonts\\FRIZQT__.TTF" },
+    { "arial", "Arial Narrow", "Fonts\\ARIALN.TTF" },
+    { "morpheus", "Morpheus (fancy)", "Fonts\\MORPHEUS.TTF" },
+    { "skurri", "Skurri (rough)", "Fonts\\SKURRI.TTF" },
+    { "g2002", "2002", "Fonts\\2002.TTF" },
+    { "g2002b", "2002 Bold", "Fonts\\2002B.TTF" },
+    { "damage", "Damage numbers", "Fonts\\K_Damage.TTF" },
+    { "pagetext", "Book text", "Fonts\\K_Pagetext.TTF" },
+    { "p_medieval", "MedievalSharp", PACK .. "MedievalSharp.ttf" },
+    { "p_cinzel", "Cinzel Decorative", PACK .. "CinzelDecorative.ttf" },
+    { "p_cinzelb", "Cinzel Decorative Bold", PACK .. "CinzelDecorative-Bold.ttf" },
+    { "p_metamorphous", "Metamorphous", PACK .. "Metamorphous.ttf" },
+    { "p_uncial", "Uncial Antiqua", PACK .. "UncialAntiqua.ttf" },
+    { "p_almendra", "Almendra", PACK .. "Almendra.ttf" },
+    { "p_caudex", "Caudex", PACK .. "Caudex.ttf" },
+    { "p_philosopher", "Philosopher", PACK .. "Philosopher.ttf" },
+    { "p_marcellus", "Marcellus", PACK .. "Marcellus.ttf" },
+    { "p_pirata", "Pirata One", PACK .. "PirataOne.ttf" },
+    { "p_germania", "Germania One", PACK .. "GermaniaOne.ttf" },
+    { "p_fraktur", "UnifrakturCook (gothic)", PACK .. "UnifrakturCook.ttf" },
+    { "p_bebas", "Bebas Neue (tall caps)", PACK .. "BebasNeue.ttf" },
+    { "p_anton", "Anton (heavy)", PACK .. "Anton.ttf" },
+    { "p_unica", "Unica One", PACK .. "UnicaOne.ttf" },
+    { "p_rajdhani", "Rajdhani", PACK .. "Rajdhani.ttf" },
+    { "p_rajdhanib", "Rajdhani Bold", PACK .. "Rajdhani-Bold.ttf" },
+    { "p_lato", "Lato", PACK .. "Lato.ttf" },
+    { "p_latob", "Lato Bold", PACK .. "Lato-Bold.ttf" },
+    { "p_fira", "Fira Sans", PACK .. "FiraSans.ttf" },
+    { "p_firab", "Fira Sans Bold", PACK .. "FiraSans-Bold.ttf" },
+    { "p_firac", "Fira Sans Condensed", PACK .. "FiraSansCondensed.ttf" },
+    { "p_ubuntu", "Ubuntu", PACK .. "Ubuntu.ttf" },
+    { "p_ubuntub", "Ubuntu Bold", PACK .. "Ubuntu-Bold.ttf" },
+    { "p_poppins", "Poppins", PACK .. "Poppins-Regular.ttf" },
+    { "p_poppinsb", "Poppins Bold", PACK .. "Poppins-Bold.ttf" },
+    { "p_carlito", "Carlito", PACK .. "Carlito-Regular.ttf" },
+    { "p_carlitob", "Carlito Bold", PACK .. "Carlito-Bold.ttf" },
+    { "p_ptsans", "PT Sans", PACK .. "PTSans.ttf" },
+    { "p_ptnarrow", "PT Sans Narrow", PACK .. "PTSansNarrow.ttf" },
+    { "p_dejavu", "DejaVu Sans", PACK .. "DejaVuSans.ttf" },
+    { "p_dejavub", "DejaVu Sans Bold", PACK .. "DejaVuSans-Bold.ttf" },
+    { "p_dejavuc", "DejaVu Sans Condensed", PACK .. "DejaVuSansCondensed.ttf" },
+    { "p_liberation", "Liberation Sans", PACK .. "LiberationSans-Regular.ttf" },
+    { "p_caladea", "Caladea (serif)", PACK .. "Caladea-Regular.ttf" },
+    { "p_ptserif", "PT Serif", PACK .. "PTSerif.ttf" },
+    { "p_dejavuserif", "DejaVu Serif", PACK .. "DejaVuSerif.ttf" },
+    { "p_libserif", "Liberation Serif", PACK .. "LiberationSerif-Regular.ttf" },
+    { "p_dejavumono", "DejaVu Sans Mono", PACK .. "DejaVuSansMono.ttf" },
+    { "p_ubuntumono", "Ubuntu Mono", PACK .. "UbuntuMono.ttf" },
+    { "p_ptmono", "PT Mono", PACK .. "PTMono.ttf" },
+    { "p_libmono", "Liberation Mono", PACK .. "LiberationMono-Regular.ttf" },
+    { "p_vt323", "VT323 (terminal)", PACK .. "VT323.ttf" },
+    { "p_pressstart", "Press Start 2P (pixel)", PACK .. "PressStart2P.ttf" },
+}
+local FONTS, FONT_PATH, FONT_ORDER = { default = "Original (unchanged)" }, {}, { "default" }
+local testFS
+local function FontLoads(path)
+    if not testFS then testFS = UIParent:CreateFontString(nil, "OVERLAY") end
+    local ok, res = pcall(testFS.SetFont, testFS, path, 12, "")
+    return ok and res ~= false and res ~= nil
+end
+local fontsBuilt = {}
+-- (re)builds the list in place: the options rows keep pointing at the same tables
+local function BuildFonts()
+    for i = #FONT_ORDER, 2, -1 do FONT_ORDER[i] = nil end
+    for k in pairs(FONTS) do if k ~= "default" then FONTS[k] = nil end end
+    for k in pairs(FONT_PATH) do FONT_PATH[k] = nil end
+    for _, d in ipairs(FONT_DEFS) do
+        local ok = fontsBuilt[d[3]]
+        if ok == nil then ok = FontLoads(d[3]) fontsBuilt[d[3]] = ok end
+        if ok then
+            FONT_ORDER[#FONT_ORDER + 1] = d[1]
+            FONTS[d[1]] = d[2]
+            FONT_PATH[d[1]] = d[3]
+        end
+    end
+    local LSM = _G.LibStub and _G.LibStub("LibSharedMedia-3.0", true)
+    if LSM then
+        local names = {}
+        for _, n in ipairs(LSM:List("font") or {}) do names[#names + 1] = n end
+        table.sort(names)
+        for _, n in ipairs(names) do
+            local key = "lsm:" .. n
+            local path = LSM:Fetch("font", n, true)
+            if path then
+                FONT_ORDER[#FONT_ORDER + 1] = key
+                FONTS[key] = n .. " (SharedMedia)"
+                FONT_PATH[key] = path
+            end
+        end
+    end
+end
+local function FontPathOf(key) return FONT_PATH[key] end
 
 -- the settings of one window (all defaults leave the add-on's own look alone)
 local function Defaults()
@@ -482,8 +574,10 @@ local function CloseMenu()
     if catcher then catcher:Hide() end
 end
 
+local MAXVIS = 14
 local function OpenDropdown(anchor, row, get, set)
     if menu and menu:IsShown() and menu.anchor == anchor then CloseMenu() return end
+    if row.key == "font" then BuildFonts() end
     if not catcher then
         catcher = CreateFrame("Button", nil, UIParent)
         catcher:SetAllPoints(UIParent)
@@ -494,44 +588,66 @@ local function OpenDropdown(anchor, row, get, set)
     if not menu then
         menu = Box(UIParent, 10, 10, { 0.07, 0.07, 0.09 }, GOLD)
         menu:SetFrameStrata("FULLSCREEN_DIALOG")
+        menu:EnableMouseWheel(true)
         menu.items = {}
         menu:Hide()
     end
     menu.anchor = anchor
     local cur = get()
     local n = #row.values
-    menu:SetSize(math.max(anchor:GetWidth(), 170), n * 22 + 6)
+    local vis = math.min(n, MAXVIS)
+    local maxOff = math.max(0, n - vis)
+    local off = 0
+    for i, v in ipairs(row.values) do if v == cur then off = math.max(0, math.min(maxOff, i - math.ceil(vis / 2))) break end end
+    menu:SetSize(math.max(anchor:GetWidth(), row.key == "font" and 230 or 170), vis * 22 + 6)
     menu:ClearAllPoints()
     menu:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -1)
-    for i = 1, math.max(n, #menu.items) do
-        local it = menu.items[i]
-        if i <= n then
-            if not it then
-                it = CreateFrame("Button", nil, menu)
-                it:SetHeight(22)
-                it.hl = it:CreateTexture(nil, "BACKGROUND")
-                it.hl:SetAllPoints(it)
-                it.hl:SetTexture(WHITE)
-                it.hl:SetVertexColor(1, 1, 1, 0.12)
-                it.hl:Hide()
-                it.text = Text(it, 11)
-                it.text:SetPoint("LEFT", 8, 0)
-                it:SetScript("OnEnter", function(self) self.hl:Show() end)
-                it:SetScript("OnLeave", function(self) self.hl:Hide() end)
-                menu.items[i] = it
+    local function Render()
+        for i = 1, math.max(vis, #menu.items) do
+            local it = menu.items[i]
+            if i <= vis then
+                if not it then
+                    it = CreateFrame("Button", nil, menu)
+                    it:SetHeight(22)
+                    it.hl = it:CreateTexture(nil, "BACKGROUND")
+                    it.hl:SetAllPoints(it)
+                    it.hl:SetTexture(WHITE)
+                    it.hl:SetVertexColor(1, 1, 1, 0.12)
+                    it.hl:Hide()
+                    it.text = Text(it, 11)
+                    it.text:SetPoint("LEFT", 8, 0)
+                    it:SetScript("OnEnter", function(self) self.hl:Show() end)
+                    it:SetScript("OnLeave", function(self) self.hl:Hide() end)
+                    menu.items[i] = it
+                end
+                it:ClearAllPoints()
+                it:SetPoint("TOPLEFT", menu, "TOPLEFT", 3, -3 - (i - 1) * 22)
+                it:SetPoint("TOPRIGHT", menu, "TOPRIGHT", -3, -3 - (i - 1) * 22)
+                local v = row.values[off + i]
+                it.text:SetText((row.names and row.names[v]) or tostring(v))
+                -- every font is shown in its own face
+                local face = (row.key == "font" and FONT_PATH[v]) or FONT
+                if not pcall(it.text.SetFont, it.text, face, 12, "") then it.text:SetFont(FONT, 11, "") end
+                if v == cur then it.text:SetTextColor(GOLD[1], GOLD[2], GOLD[3]) else it.text:SetTextColor(1, 1, 1) end
+                it:SetScript("OnClick", function() CloseMenu() set(v) end)
+                it:Show()
+            elseif it then
+                it:Hide()
             end
-            it:ClearAllPoints()
-            it:SetPoint("TOPLEFT", menu, "TOPLEFT", 3, -3 - (i - 1) * 22)
-            it:SetPoint("TOPRIGHT", menu, "TOPRIGHT", -3, -3 - (i - 1) * 22)
-            local v = row.values[i]
-            it.text:SetText((row.names and row.names[v]) or tostring(v))
-            if v == cur then it.text:SetTextColor(GOLD[1], GOLD[2], GOLD[3]) else it.text:SetTextColor(1, 1, 1) end
-            it:SetScript("OnClick", function() CloseMenu() set(v) end)
-            it:Show()
-        elseif it then
-            it:Hide()
+        end
+        if menu.more then
+            menu.more:SetText(maxOff > 0 and (("%d-%d of %d  (scroll)"):format(off + 1, off + vis, n)) or "")
         end
     end
+    if not menu.more then
+        menu.more = Text(menu, 9, DIM, "RIGHT")
+        menu.more:SetPoint("BOTTOMRIGHT", menu, "BOTTOMRIGHT", -6, -12)
+    end
+    menu:SetScript("OnMouseWheel", function(_, delta)
+        local o = math.max(0, math.min(maxOff, off - delta * 3))
+        if o ~= off then off = o Render() end
+    end)
+    Render()
     catcher:Show()
     menu:Show()
 end
@@ -1007,6 +1123,7 @@ end
 --        hide = { "keys of child objects to hide" }, pad = 0, noScale = true } } }
 function Look.Setup(c)
     cfg = c
+    Safe(BuildFonts)
     windows = c.windows or {}
     byId = {}
     for _, spec in ipairs(windows) do byId[spec.id] = spec end
@@ -1028,6 +1145,7 @@ function Look.Setup(c)
     local f = CreateFrame("Frame")
     f:RegisterEvent("PLAYER_LOGIN")
     f:SetScript("OnEvent", function()
+        Safe(BuildFonts)
         for _, spec in ipairs(windows) do
             local fr = spec.global and _G[spec.global]
             if fr then Look.Attach(spec.id, fr) end
