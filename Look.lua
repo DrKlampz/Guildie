@@ -188,6 +188,7 @@ local function Store()
     db.winlook = db.winlook or {}
     local L = db.winlook
     if L.sync == nil then L.sync = not (cfg and cfg.syncDefault == false) end
+    if cfg and cfg.syncDefault == false and not L.syncReset then L.sync = false L.syncReset = true end
     L.w = L.w or {}
     L.open = L.open or {}
     return L
@@ -759,16 +760,16 @@ local SECTIONS = {
     } },
 }
 
-local function Target(id) return Own(id) end
+local function Target(id) if id == "_opts" then return {} end return Own(id) end
 
 local function MakeRow(parent, id, row)
     local c = CreateFrame("Frame", nil, parent)
     c:SetWidth(BW)
     local function T() return Target(id) end
-    local function get() return T()[row.key] end
+    local function get() if row.get then return row.get() end return T()[row.key] end
+    local function put(v) if row.set then row.set(v) else T()[row.key] = v end end
     local function set(v)
-        T()[row.key] = v
-        if row.key ~= "enabled" and row.key ~= "preset" then end
+        put(v)
         ApplyAll()
         RefreshAll()
     end
@@ -821,7 +822,7 @@ local function MakeRow(parent, id, row)
             if self.quiet then return end
             v = math.floor(v / row.step + 0.5) * row.step
             val:SetText(fmt:format(v))
-            if get() ~= v then T()[row.key] = v ApplyAll() end
+            if get() ~= v then put(v) ApplyAll() end
         end)
         w.refresh = function()
             local v = tonumber(get()) or row.min
@@ -830,6 +831,18 @@ local function MakeRow(parent, id, row)
             s.quiet = false
             val:SetText(fmt:format(v))
         end
+
+    elseif row.kind == "button" then
+        c:SetHeight(32)
+        local b = FlatButton(c, row.label, row.width or 200, 24, function() if row.onClick then row.onClick() end RefreshAll() end)
+        b:SetPoint("LEFT", c, "LEFT", 12, 0)
+
+    elseif row.kind == "note" then
+        local t = Text(c, 10, DIM)
+        t:SetPoint("TOPLEFT", c, "TOPLEFT", 12, -2)
+        t:SetWidth(BW - 28)
+        t:SetText(row.label)
+        c:SetHeight(math.max(18, math.ceil(#row.label / 62) * 13 + 6))
 
     elseif row.kind == "cycle" then
         c:SetHeight(28)
@@ -847,7 +860,9 @@ local function MakeRow(parent, id, row)
         b:SetScript("OnClick", function(self)
             OpenDropdown(self, row, get, function(v)
                 local t = T()
-                if row.preset then
+                if row.set then
+                    row.set(v)
+                elseif row.preset then
                     local p = PRESETS[v]
                     t.preset = v
                     t.bgColor, t.edgeColor, t.titleColor = Copy(p.bg), Copy(p.edge), Copy(p.edge)
@@ -926,7 +941,7 @@ local function MakeRow(parent, id, row)
         eb:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
         eb:SetBackdropColor(FIELD[1], FIELD[2], FIELD[3], 1)
         eb:SetBackdropBorderColor(LINE[1], LINE[2], LINE[3], 1)
-        local function Commit(self) T()[row.key] = self:GetText() or "" ApplyAll() end
+        local function Commit(self) put(self:GetText() or "") ApplyAll() end
         eb:SetScript("OnEnterPressed", function(self) Commit(self) self:ClearFocus() end)
         eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() RefreshAll() end)
         eb:SetScript("OnEditFocusLost", Commit)
@@ -949,7 +964,7 @@ local function Synced() local L = Store() return L and L.sync and #windows > 1 e
 local function OpenState(id, sec, first)
     local L = Store()
     local v = L.open[id .. ":" .. sec.id]
-    if v == nil then return first end
+    if v == nil then return first or sec.open end
     return v
 end
 
@@ -966,7 +981,12 @@ local function BuildView(id)
     bt:SetText("\"Sync all windows\" is on, so this window follows the first window's look. Turn it off at the top to give this window its own.")
     v.banner:Hide()
     local all = {}
-    for _, sec in ipairs(SECTIONS) do all[#all + 1] = sec end
+    if id == "_opts" then
+        local o = cfg.options and cfg.options()
+        for _, sec in ipairs((o and o.sections) or {}) do sec.extra = true all[#all + 1] = sec end
+    else
+        for _, sec in ipairs(SECTIONS) do all[#all + 1] = sec end
+    end
     local ex = Extra(byId[id])
     if ex and ex.sections then for _, sec in ipairs(ex.sections) do sec.extra = true all[#all + 1] = sec end end
     for si, sec in ipairs(all) do
@@ -1003,7 +1023,7 @@ Relayout = function(id)
     local v = built[id]
     if not v then return end
     local y = -6
-    local follow = Synced() and windows[1] and id ~= windows[1].id
+    local follow = Synced() and windows[1] and byId[id] and id ~= windows[1].id
     if follow then
         v.banner:ClearAllPoints()
         v.banner:SetPoint("TOPLEFT", v.body, "TOPLEFT", 4, y)
@@ -1057,14 +1077,15 @@ local function ShowTab(id)
     scroll:SetVerticalScroll(0)
     Relayout(id)
     RefreshAll()
-    for _, spec in ipairs(windows) do
-        local b = win.tabs and win.tabs[spec.id]
-        if b then
-            local on = (spec.id == id)
-            b.sel:SetShown(on)
-            b.text:SetTextColor(on and GOLD[1] or 0.85, on and GOLD[2] or 0.85, on and GOLD[3] or 0.85)
-        end
+    for tid, b in pairs(win.tabs or {}) do
+        local on = (tid == id)
+        b.sel:SetShown(on)
+        b.text:SetTextColor(on and GOLD[1] or 0.85, on and GOLD[2] or 0.85, on and GOLD[3] or 0.85)
     end
+    local look = (id ~= "_opts")
+    if win.syncBox then win.syncBox:SetShown(look) win.syncLbl:SetShown(look) win.syncBtn:SetShown(look) end
+    if win.resetBtn then win.resetBtn:SetShown(look) end
+    if win.hintTxt then win.hintTxt:SetShown(look) end
 end
 
 local function Build()
@@ -1085,7 +1106,7 @@ local function Build()
     t:SetText(tostring(cfg.title))
     local sub = Text(win, 11, DIM)
     sub:SetPoint("LEFT", t, "RIGHT", 8, -1)
-    sub:SetText("look and feel")
+    sub:SetText(cfg.options and "options and look" or "look and feel")
     local x = CreateFrame("Button", nil, win, "UIPanelCloseButton")
     x:SetPoint("TOPRIGHT", 2, 2)
     table.insert(_G.UISpecialFrames, name)
@@ -1124,14 +1145,18 @@ local function Build()
             RefreshAll()
         end)
         win.DrawSync = Draw
+        win.syncBox, win.syncLbl, win.syncBtn = sync, sl, sbtn
         top = -70
     end
 
     win.tabs = {}
-    if #windows > 1 then
+    local tabList = {}
+    if cfg.options then tabList[#tabList + 1] = { id = "_opts", name = cfg.optionsName or "Options" } end
+    for _, spec in ipairs(windows) do tabList[#tabList + 1] = spec end
+    if #tabList > 1 then
         local prev
-        local tw = math.floor((472 - 24 - (#windows - 1) * 4) / #windows)
-        for _, spec in ipairs(windows) do
+        local tw = math.floor((472 - 24 - (#tabList - 1) * 4) / #tabList)
+        for _, spec in ipairs(tabList) do
             local b = CreateFrame("Button", nil, win)
             b:SetSize(tw, 26)
             if prev then b:SetPoint("LEFT", prev, "RIGHT", 4, 0) else b:SetPoint("TOPLEFT", win, "TOPLEFT", 12, top) end
@@ -1169,21 +1194,61 @@ local function Build()
         ApplyAll() RefreshAll()
     end)
     reset:SetPoint("BOTTOMLEFT", 14, 14)
+    win.resetBtn = reset
     local hint = Text(win, 10, DIM, "RIGHT")
     hint:SetPoint("BOTTOMRIGHT", -16, 20)
+    win.hintTxt = hint
     hint:SetText("Untick \"Use a custom look\" to get the original back.")
     win:SetScript("OnShow", function() if win.DrawSync then win.DrawSync() end RefreshAll() end)
     win:SetScript("OnHide", CloseMenu)
     win:Hide()
 end
 
+-- shorthands for the add-ons' own options rows (see cfg.options)
+-- K: a checkbox on a saved-settings key. tbl is a function returning the table that holds the key.
+function Look.K(label, tbl, key, after, invert)
+    return { kind = "check", label = label,
+        get = function() local v = tbl()[key] if invert then return not v end return v ~= false and v ~= nil and v end,
+        set = function(v) if invert then v = not v end tbl()[key] = v if after then Safe(after, v) end end }
+end
+-- check with a default of "off" (nil counts as off)
+function Look.Koff(label, tbl, key, after)
+    return { kind = "check", label = label, get = function() return tbl()[key] == true end,
+        set = function(v) tbl()[key] = v if after then Safe(after, v) end end }
+end
+-- check with a default of "on" (nil counts as on)
+function Look.Kon(label, tbl, key, after)
+    return { kind = "check", label = label, get = function() return tbl()[key] ~= false end,
+        set = function(v) tbl()[key] = v if after then Safe(after, v) end end }
+end
+function Look.Slider(label, tbl, key, min, max, step, fmt, after)
+    return { kind = "slider", label = label, min = min, max = max, step = step, fmt = fmt,
+        get = function() return tbl()[key] end, set = function(v) tbl()[key] = v if after then Safe(after, v) end end }
+end
+-- choices = { {value, "label"}, ... }
+function Look.Choice(label, tbl, key, choices, after)
+    local values, names = {}, {}
+    for i, c in ipairs(choices) do values[i] = c[1] names[c[1]] = c[2] end
+    return { kind = "cycle", label = label, values = values, names = names,
+        get = function() local v = tbl()[key] if names[v] == nil then v = values[1] end return v end,
+        set = function(v) tbl()[key] = v if after then Safe(after, v) end end }
+end
+function Look.Text(label, tbl, key, hint, after)
+    return { kind = "text", label = label, hint = hint, get = function() return tbl()[key] or "" end,
+        set = function(v) tbl()[key] = v if after then Safe(after, v) end end }
+end
+function Look.Note(text) return { kind = "note", label = text } end
+function Look.Button(label, fn, width) return { kind = "button", label = label, onClick = fn, width = width } end
+
 function Look.Open(id)
     if not (cfg and Store()) then return end
     if not win then Build() end
     win:Show()
     if win.DrawSync then win.DrawSync() end
-    ShowTab(id or curTab or windows[1].id)
+    ShowTab(id or curTab or (cfg.options and "_opts") or windows[1].id)
 end
+
+function Look.OpenOptions() Look.Open(cfg and cfg.options and "_opts" or nil) end
 
 function Look.Toggle()
     if win and win:IsShown() then win:Hide() else Look.Open() end
