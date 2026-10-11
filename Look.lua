@@ -239,12 +239,34 @@ local function Own(id)
     if e and e.defaults then for k, v in pairs(e.defaults) do if w[k] == nil then w[k] = Copy(v) end end end
     return w
 end
+-- GreedUI (when it is installed and "dress my add-ons" is on) hands every window its colors, font and button look
+local function Shade(c, f) return { math.min(1, c[1] * f), math.min(1, c[2] * f), math.min(1, c[3] * f) } end
+local function GreedOverlay(w)
+    local G = _G.GreedUI
+    local t = G and G.GetTheme and G.GetTheme()
+    if not (t and w) then return w end
+    local o = Copy(w)
+    o.enabled = true
+    o.bgColor, o.alpha = Copy(t.bg), math.max(0.85, tonumber(t.bgAlpha) or 0.92)
+    o.edgeColor, o.titleColor, o.edgeAlpha = Copy(t.accent), Copy(t.accent), 1
+    o.bgStyle, o.edgeStyle, o.edgeSize = "solid", "line", tonumber(t.borderSize) or 1
+    o.buttons, o.btnBgStyle = true, "solid"
+    o.btnColor, o.btnHover = Shade(t.bg, 2.6), Shade(t.bg, 4.2)
+    o.btnEdgeStyle, o.btnEdgeColor, o.btnEdgeSize = "line", Copy(t.accent), 1
+    o.btnTextColor = Shade(t.accent, 1.05)
+    if t.font then FONT_PATH["greedui"] = t.font o.font = "greedui" end
+    o.greedStone, o.greedInlay = t.stone, t.inlay
+    return o
+end
 local function Eff(id)
     local L = Store()
     if not L then return nil end
-    if id == "_look" then return windows[1] and Own(windows[1].id) or nil end   -- this panel wears the first window's look
-    if L.sync and windows[1] then return Own(windows[1].id) end
-    return Own(id)
+    if id == "_look" then   -- this panel wears the first window's look
+        if windows[1] then return GreedOverlay(Own(windows[1].id)) end
+        return GreedOverlay(Defaults())
+    end
+    if L.sync and windows[1] then return GreedOverlay(Own(windows[1].id)) end
+    return GreedOverlay(Own(id))
 end
 
 ----------------------------------------------------------------------
@@ -344,7 +366,8 @@ local function WalkFonts(obj, fn, depth)
     end
 end
 
-local function ApplyFonts(frame, s, on)
+local function ApplyFonts(frame, s, on, spec)
+    local skip = spec and spec.skinSkip
     WalkFonts(frame, function(fs)
         if not fs.GetFont or not fs.SetFont then return end
         if not fs.lookFont then
@@ -353,7 +376,8 @@ local function ApplyFonts(frame, s, on)
             fs.lookFont = { path, size or 12, flags or "" }
         end
         local o = fs.lookFont
-        if on then
+        local useOn = on and not (skip and skip(fs))
+        if useOn then
             local path = FONT_PATH[s.font] or o[1]
             local flags = o[3]
             if s.outline and not tostring(flags):find("OUTLINE") then flags = (flags ~= "" and (flags .. ",") or "") .. "OUTLINE" end
@@ -365,10 +389,18 @@ local function ApplyFonts(frame, s, on)
 end
 
 -- game buttons (the red "panel" buttons) wearing the window's button look
+local skinAll, skinSkip = false, nil   -- a window can ask for every labelled button to be skinned (the auction house's own pages)
 local function IsPanelButton(b)
     if not (b.GetObjectType and b:GetObjectType() == "Button") then return false end
     if b.lookNoSkin or b.lookBtn == false then return false end
     if b.Left and b.Right then return true end
+    if type(b.lookBtn) == "table" and b.lookBtn.on then return true end
+    if skinAll then
+        local fs = b.GetFontString and b:GetFontString()
+        local w, h = b:GetWidth() or 0, b:GetHeight() or 0
+        local nm = b.GetName and b:GetName() or ""
+        if fs and fs:GetText() and fs:GetText() ~= "" and w >= 40 and h >= 16 and h <= 44 and not nm:find("Tab") and not b.GetItemButtonCount then return true end
+    end
     local nt = b.GetNormalTexture and b:GetNormalTexture()
     local p = nt and nt.GetTexture and nt:GetTexture()
     return type(p) == "string" and p:find("Panel%-Button") and true or false
@@ -478,9 +510,12 @@ local function WalkButtons(obj, fn, depth)
     end
 end
 
-local function ApplyButtons(frame, s, on)
+local function ApplyButtons(frame, s, on, spec)
     on = on and s.buttons and true or false
-    WalkButtons(frame, function(b) Safe(SkinButton, b, s, on) end)
+    skinAll = spec and spec.skinAll and true or false
+    skinSkip = spec and spec.skinSkip
+    WalkButtons(frame, function(b) Safe(SkinButton, b, s, on and not (skinSkip and skinSkip(b))) end)
+    skinAll, skinSkip = false, nil
 end
 
 local function ApplyOne(spec)
@@ -524,6 +559,12 @@ local function ApplyOne(spec)
         local e = s.edgeColor
         bg:SetBackdropBorderColor(e[1], e[2], e[3], tonumber(s.edgeAlpha) or 0.95)
         bg:Show()
+        do   -- black stone with gold inlay, when GreedUI hands it over
+            local GU = _G.GreedUI
+            if GU and GU.Inlay and (s.greedStone or s.greedInlay) then
+                GU.Inlay(bg, { inset = inset + 3, studs = s.greedInlay and true or false, stoneAlpha = s.greedStone and 0.45 or 0, lineAlpha = s.greedInlay and 0.5 or 0 })
+            elseif GU and GU.InlayOff and bg.greedInlay then GU.InlayOff(bg) end
+        end
         -- a header bar behind the title (replaces the game's own strip)
         local hd = bg.lookHeader
         if s.header then
@@ -564,12 +605,13 @@ local function ApplyOne(spec)
         end
         if not frame.lookAlpha then frame.lookAlpha = frame:GetAlpha() or 1 end
         frame:SetAlpha(math.max(0.1, math.min(1, tonumber(s.frameAlpha) or 1)))
-        Safe(ApplyFonts, frame, s, true)
-        Safe(ApplyButtons, frame, s, true)
+        Safe(ApplyFonts, frame, s, true, spec)
+        Safe(ApplyButtons, frame, s, true, spec)
         frame.lookLock = s.lock and true or false
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), true) end
     else
         if bg then bg:Hide() end
+        if bg and bg.greedInlay and _G.GreedUI and _G.GreedUI.InlayOff then _G.GreedUI.InlayOff(bg) end
         Safe(Strip, frame, spec, false)
         if frame.lookScale then frame:SetScale(frame.lookScale) frame.lookScale = nil end
         if frame.lookAlpha then frame:SetAlpha(frame.lookAlpha) frame.lookAlpha = nil end
@@ -577,8 +619,8 @@ local function ApplyOne(spec)
             local fs = spec.title(frame)
             if fs and fs.lookTitle then fs:SetTextColor(fs.lookTitle[1], fs.lookTitle[2], fs.lookTitle[3]) fs.lookTitle = nil end
         end
-        Safe(ApplyFonts, frame, s, false)
-        Safe(ApplyButtons, frame, s, false)
+        Safe(ApplyFonts, frame, s, false, spec)
+        Safe(ApplyButtons, frame, s, false, spec)
         frame.lookLock = false
         if bg and bg.lookHeader then bg.lookHeader.fill:Hide() bg.lookHeader.line:Hide() end
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), false) end
@@ -1488,6 +1530,12 @@ function Look.Setup(c)
         for _, spec in ipairs(windows) do
             local fr = spec.global and _G[spec.global]
             if fr then Look.Attach(spec.id, fr) end
+        end
+        -- GreedUI: show up in its add-on list and follow its look
+        local G = _G.GreedUI
+        if G and G.RegisterPlugin and cfg and cfg.title ~= "GreedUI" then
+            G.RegisterPlugin(cfg.title, { open = function() Look.Open() end, refresh = function() ApplyAll() end })
+            G.OnTheme(function() ApplyAll() end)
         end
     end)
 end
