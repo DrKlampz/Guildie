@@ -275,7 +275,8 @@ local function Own(id)
     return w
 end
 -- GreedUI (when it is installed and "dress my add-ons" is on) hands every window its colors, font and button look
-local function Shade(c, f) return { math.min(1, c[1] * f), math.min(1, c[2] * f), math.min(1, c[3] * f) } end
+-- brighter by a factor, with a floor lift so a pure black panel still gets visibly lighter buttons
+local function Shade(c, f) local k = f > 1 and (f - 1) * 0.03 or 0 return { math.min(1, c[1] * f + k), math.min(1, c[2] * f + k), math.min(1, c[3] * f + k) } end
 local function GreedOverlay(w)
     local G = _G.GreedUI
     local t = G and G.GetTheme and G.GetTheme(cfg and cfg.title)
