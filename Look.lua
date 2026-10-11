@@ -1106,7 +1106,7 @@ local function MakeRow(parent, id, row, isExtra)
         eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() RefreshAll() end)
         eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
         eb:SetScript("OnEditFocusLost", function(self) self:HighlightText(0, 0) end)
-        sw:SetScript("OnClick", function() PickColor(T(), row.key, function() if not isExtra and id ~= "_opts" then T().enabled = true end if row.touch then Safe(row.touch, T()) end ApplyAll() RefreshAll() end) end)
+        sw:SetScript("OnClick", function() PickColor((row.tbl and row.tbl()) or T(), row.key, function() if not isExtra and id ~= "_opts" then T().enabled = true end if row.touch then Safe(row.touch, T()) end ApplyAll() RefreshAll() end) end)
         sw:SetScript("OnEnter", function(self) GameTooltip:SetOwner(self, "ANCHOR_TOP") GameTooltip:SetText("Click to pick a color") GameTooltip:Show() end)
         sw:SetScript("OnLeave", function() GameTooltip:Hide() end)
         w.refresh = function()
@@ -1432,6 +1432,12 @@ function Look.Choice(label, tbl, key, choices, after)
 end
 function Look.Text(label, tbl, key, hint, after)
     return { kind = "text", label = label, hint = hint, get = function() return tbl()[key] or "" end,
+        set = function(v) tbl()[key] = v if after then Safe(after, v) end end }
+end
+-- a color row for an add-on's own settings table: tbl() returns it, default is used until one is picked
+function Look.Color(label, tbl, key, default, after)
+    return { kind = "color", label = label, key = key, tbl = tbl,
+        get = function() local c = tbl()[key] if type(c) ~= "table" then c = default end return c end,
         set = function(v) tbl()[key] = v if after then Safe(after, v) end end }
 end
 function Look.Note(text) return { kind = "note", label = text } end
