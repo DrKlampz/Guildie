@@ -22,9 +22,16 @@ local built = {}             -- id -> options view
 local win, scroll, curTab = nil, nil, nil
 local RefreshAll, Relayout, ApplyAll
 
+local shownErr = {}
 local function Safe(fn, ...)
     local ok, err = pcall(fn, ...)
-    if not ok and cfg and cfg.debug then print("|cffff6060" .. tostring(cfg.title) .. " look:|r " .. tostring(err)) end
+    if not ok then
+        local key = tostring(err):gsub("%d+", "#")
+        if not shownErr[key] and (cfg and cfg.title) then
+            shownErr[key] = true
+            print("|cffff6060" .. tostring(cfg.title) .. " look:|r " .. tostring(err))
+        end
+    end
     return ok
 end
 
@@ -239,44 +246,51 @@ end
 ----------------------------------------------------------------------
 -- applying a look to a frame
 ----------------------------------------------------------------------
-local STRIP_KEYS = { "NineSlice", "Bg", "TitleBg", "TopTileStreaks", "InsetBg", "Inset", "TopBorder", "BottomBorder", "LeftBorder", "RightBorder" }
+local STRIP_KEYS = { "NineSlice", "Bg", "TitleBg", "TopTileStreaks", "InsetBg", "Inset", "TopBorder", "BottomBorder", "LeftBorder", "RightBorder",
+    "TopLeftCorner", "TopRightCorner", "BotLeftCorner", "BotRightCorner", "BottomLeftCorner", "BottomRightCorner",
+    "TopEdge", "BottomEdge", "LeftEdge", "RightEdge", "Background", "TitleBar", "HeaderBg", "TopBG", "BorderFrame", "ButtonBottomBorder",
+    "PortraitContainer", "portrait", "TitleBackground", "TopCenter", "BottomCenter", "BackgroundTile" }
 
 local function Strip(frame, spec, on)
     local st = frame.lookStrip
     if on then
-        if st then return end
-        st = { shown = {} }
+        -- runs on every apply: the window's own code may build or re-show pieces after we first looked
+        st = st or { shown = {} }
         frame.lookStrip = st
+        st.alpha = st.alpha or {}
+        local function Gone(o, key)
+            if type(o) == "table" and o.Hide then
+                if st.shown[key] == nil then st.shown[key] = o:IsShown() and true or false end
+                o:Hide()
+            end
+        end
+        local function Fade(o)
+            if type(o) == "table" and o.SetAlpha then
+                if st.alpha[o] == nil then st.alpha[o] = o.lookOrigAlpha or o:GetAlpha() end
+                o:SetAlpha(0)
+            end
+        end
         if spec.strip == "template" then
-            for _, k in ipairs(STRIP_KEYS) do
-                local o = frame[k]
-                if type(o) == "table" and o.Hide then
-                    st.shown[k] = o:IsShown() and true or false
-                    o:Hide()
-                end
+            for _, k in ipairs(STRIP_KEYS) do Gone(frame[k], k) end
+            -- the pieces of a nine-slice border are children of it; hiding the parent is not always enough
+            local ns9 = frame.NineSlice
+            if type(ns9) == "table" and ns9.GetRegions then
+                for _, r in ipairs({ ns9:GetRegions() }) do Fade(r) end
             end
         elseif spec.strip == "backdrop" and frame.SetBackdropColor then
-            local r, g, b, a = frame:GetBackdropColor()
-            local er, eg, eb, ea = frame:GetBackdropBorderColor()
-            st.bc, st.ec = { r or 0, g or 0, b or 0, a or 1 }, { er or 0, eg or 0, eb or 0, ea or 1 }
+            if not st.bc and frame.GetBackdropColor then
+                local r, g, b, a = frame:GetBackdropColor()
+                local er, eg, eb, ea = frame:GetBackdropBorderColor()
+                if r then st.bc, st.ec = { r, g, b, a or 1 }, { er or 0, eg or 0, eb or 0, ea or 1 } end
+            end
             frame:SetBackdropColor(0, 0, 0, 0)
             frame:SetBackdropBorderColor(0, 0, 0, 0)
         end
-        for _, k in ipairs(spec.hide or {}) do
-            local o = frame[k]
-            if type(o) == "table" and o.Hide then st.shown["x:" .. k] = o:IsShown() and true or false o:Hide() end
-        end
-        -- named pieces that are globals, and the frame's own loose textures (mailbox windows)
-        for _, g in ipairs(spec.hideGlobals or {}) do
-            local o = _G[g]
-            if type(o) == "table" and o.SetAlpha then st.alpha = st.alpha or {} st.alpha[o] = o:GetAlpha() o:SetAlpha(0) end
-        end
+        for _, k in ipairs(spec.hide or {}) do Gone(frame[k], "x:" .. k) end
+        for _, g in ipairs(spec.hideGlobals or {}) do Fade(_G[g]) end
         if spec.regions and frame.GetRegions then
-            st.alpha = st.alpha or {}
             for _, r in ipairs({ frame:GetRegions() }) do
-                if r.GetObjectType and r:GetObjectType() == "Texture" and r.SetAlpha then
-                    st.alpha[r] = r.lookOrigAlpha or r:GetAlpha() r:SetAlpha(0)
-                end
+                if r.GetObjectType and r:GetObjectType() == "Texture" and r ~= frame.lookHdr then Fade(r) end
             end
         end
     else
@@ -288,9 +302,12 @@ local function Strip(frame, spec, on)
             local o = frame[key]
             if o and was and o.Show then o:Show() end
         end
-        if st.bc and frame.SetBackdropColor then
-            frame:SetBackdropColor(st.bc[1], st.bc[2], st.bc[3], st.bc[4])
-            frame:SetBackdropBorderColor(st.ec[1], st.ec[2], st.ec[3], st.ec[4])
+        if frame.SetBackdropColor then
+            local bc, ec = st.bc or { 0.04, 0.04, 0.06, 0.96 }, st.ec or { 0.8, 0.8, 0.8, 1 }
+            if st.bc then
+                frame:SetBackdropColor(bc[1], bc[2], bc[3], bc[4])
+                frame:SetBackdropBorderColor(ec[1], ec[2], ec[3], ec[4])
+            end
         end
     end
 end
@@ -352,7 +369,7 @@ local function ApplyOne(spec)
     local bg = frame.lookBg
     if on then
         bg = EnsureBg(frame, spec)
-        Strip(frame, spec, true)
+        Safe(Strip, frame, spec, true)
         local styles = BgStyles()
         local st = styles[s.bgStyle] or styles.solid
         if s.bgStyle == "custom" then
@@ -424,19 +441,19 @@ local function ApplyOne(spec)
         end
         if not frame.lookAlpha then frame.lookAlpha = frame:GetAlpha() or 1 end
         frame:SetAlpha(math.max(0.1, math.min(1, tonumber(s.frameAlpha) or 1)))
-        ApplyFonts(frame, s, true)
+        Safe(ApplyFonts, frame, s, true)
         frame.lookLock = s.lock and true or false
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), true) end
     else
         if bg then bg:Hide() end
-        Strip(frame, spec, false)
+        Safe(Strip, frame, spec, false)
         if frame.lookScale then frame:SetScale(frame.lookScale) frame.lookScale = nil end
         if frame.lookAlpha then frame:SetAlpha(frame.lookAlpha) frame.lookAlpha = nil end
         if spec.title then
             local fs = spec.title(frame)
             if fs and fs.lookTitle then fs:SetTextColor(fs.lookTitle[1], fs.lookTitle[2], fs.lookTitle[3]) fs.lookTitle = nil end
         end
-        ApplyFonts(frame, s, false)
+        Safe(ApplyFonts, frame, s, false)
         frame.lookLock = false
         if bg and bg.lookHeader then bg.lookHeader.fill:Hide() bg.lookHeader.line:Hide() end
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), false) end
@@ -461,6 +478,10 @@ function Look.Attach(id, frame)
         end
     end
     Safe(ApplyOne, spec)
+    if _G.C_Timer and _G.C_Timer.After then
+        _G.C_Timer.After(0, function() Safe(ApplyOne, spec) end)
+        _G.C_Timer.After(0.5, function() Safe(ApplyOne, spec) end)
+    end
 end
 
 function Look.Apply() ApplyAll() end
