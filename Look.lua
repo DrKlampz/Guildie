@@ -71,8 +71,8 @@ local PACK = "Interface\\AddOns\\LookFonts\\Fonts\\"
 local FONT_DEFS = {
     { "frizqt", "Friz Quadrata (game standard)", "Fonts\\FRIZQT__.TTF" },
     { "arial", "Arial Narrow", "Fonts\\ARIALN.TTF" },
-    { "morpheus", "Morpheus (fancy)", "Fonts\\MORPHEUS.TTF" },
-    { "skurri", "Skurri (rough)", "Fonts\\SKURRI.TTF" },
+    { "morpheus", "Morpheus", "Fonts\\MORPHEUS.TTF" },
+    { "skurri", "Skurri", "Fonts\\SKURRI.TTF" },
     { "g2002", "2002", "Fonts\\2002.TTF" },
     { "g2002b", "2002 Bold", "Fonts\\2002B.TTF" },
     { "damage", "Damage numbers", "Fonts\\K_Damage.TTF" },
@@ -149,12 +149,17 @@ local function BuildFonts()
         local names = {}
         for _, n in ipairs(LSM:List("font") or {}) do names[#names + 1] = n end
         table.sort(names)
+        local have, havePath = {}, {}
+        for k, v in pairs(FONTS) do have[tostring(v):lower()] = true end
+        for k, v in pairs(FONT_PATH) do havePath[tostring(v):lower():gsub("/", "\\")] = true end
         for _, n in ipairs(names) do
-            local key = "lsm:" .. n
             local path = LSM:Fetch("font", n, true)
-            if path then
+            local lp = path and tostring(path):lower():gsub("/", "\\")
+            if path and not have[n:lower()] and not havePath[lp] then
+                local key = "lsm:" .. n
+                have[n:lower()] = true
                 FONT_ORDER[#FONT_ORDER + 1] = key
-                FONTS[key] = n .. " (SharedMedia)"
+                FONTS[key] = n
                 FONT_PATH[key] = path
             end
         end
@@ -217,6 +222,7 @@ local function Own(id)
     end
     local d = Defaults()
     for k, v in pairs(d) do if w[k] == nil then w[k] = Copy(v) end end
+    if spec and spec.defaultOn and not w.defOn then w.defOn = true w.enabled = true end   -- once
     if w.header == nil then w.header = (spec and spec.strip == "template") and true or false end
     if w.headerSize == nil then w.headerSize = 26 end
     local e = Extra(spec)
@@ -641,6 +647,7 @@ local function CloseMenu()
 end
 
 local MAXVIS = 14
+local measure
 local function OpenDropdown(anchor, row, get, set)
     if menu and menu:IsShown() and menu.anchor == anchor then CloseMenu() return end
     if row.key == "font" then BuildFonts() end
@@ -665,7 +672,19 @@ local function OpenDropdown(anchor, row, get, set)
     local maxOff = math.max(0, n - vis)
     local off = 0
     for i, v in ipairs(row.values) do if v == cur then off = math.max(0, math.min(maxOff, i - math.ceil(vis / 2))) break end end
-    menu:SetSize(math.max(anchor:GetWidth(), row.key == "font" and 230 or 170), vis * 22 + 6)
+    local widest = math.max(anchor:GetWidth(), 170)
+    do
+        measure = measure or UIParent:CreateFontString(nil, "OVERLAY")
+        measure:Hide()
+        for _, v in ipairs(row.values) do
+            local face = (row.key == "font" and FONT_PATH[v]) or FONT
+            if not pcall(measure.SetFont, measure, face, 12, "") then measure:SetFont(FONT, 11, "") end
+            measure:SetText((row.names and row.names[v]) or tostring(v))
+            local w = measure:GetStringWidth()
+            if type(w) == "number" and w + 26 > widest then widest = w + 26 end
+        end
+    end
+    menu:SetSize(math.min(widest, 360), vis * 22 + 6)
     menu:ClearAllPoints()
     menu:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -1)
     local function Render()
@@ -682,6 +701,9 @@ local function OpenDropdown(anchor, row, get, set)
                     it.hl:Hide()
                     it.text = Text(it, 11)
                     it.text:SetPoint("LEFT", 8, 0)
+                    it.text:SetPoint("RIGHT", -6, 0)
+                    it.text:SetJustifyH("LEFT")
+                    if it.text.SetWordWrap then it.text:SetWordWrap(false) end
                     it:SetScript("OnEnter", function(self) self.hl:Show() end)
                     it:SetScript("OnLeave", function(self) self.hl:Hide() end)
                     menu.items[i] = it
@@ -762,12 +784,17 @@ local SECTIONS = {
 
 local function Target(id) if id == "_opts" then return {} end return Own(id) end
 
-local function MakeRow(parent, id, row)
+local function MakeRow(parent, id, row, isExtra)
     local c = CreateFrame("Frame", nil, parent)
     c:SetWidth(BW)
     local function T() return Target(id) end
     local function get() if row.get then return row.get() end return T()[row.key] end
-    local function put(v) if row.set then row.set(v) else T()[row.key] = v end end
+    local function put(v)
+        if row.set then row.set(v) return end
+        T()[row.key] = v
+        -- changing any look setting turns that window's custom look on, so it shows at once
+        if not isExtra and id ~= "_opts" and row.key ~= "enabled" then T().enabled = true end
+    end
     local function set(v)
         put(v)
         ApplyAll()
@@ -854,6 +881,7 @@ local function MakeRow(parent, id, row)
         b:SetPoint("RIGHT", c, "RIGHT", -12, 0)
         b.text:ClearAllPoints()
         b.text:SetPoint("LEFT", 8, 0) b.text:SetPoint("RIGHT", -20, 0) b.text:SetJustifyH("LEFT")
+        if b.text.SetWordWrap then b.text:SetWordWrap(false) end
         local arrow = Text(b, 10, GOLD, "RIGHT")
         arrow:SetPoint("RIGHT", -7, 0)
         arrow:SetText("v")
@@ -869,6 +897,7 @@ local function MakeRow(parent, id, row)
                 else
                     t[row.key] = v
                 end
+                if not row.set and not isExtra and id ~= "_opts" then t.enabled = true end
                 ApplyAll() RefreshAll()
             end)
         end)
@@ -903,7 +932,7 @@ local function MakeRow(parent, id, row)
         local function Commit(self)
             local col = FromText(self:GetText())
             self:ClearFocus()
-            if col then T()[row.key] = col ApplyAll() RefreshAll() else RefreshAll() end
+            if col then put(col) ApplyAll() RefreshAll() else RefreshAll() end
         end
         eb:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -916,7 +945,7 @@ local function MakeRow(parent, id, row)
         eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() RefreshAll() end)
         eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
         eb:SetScript("OnEditFocusLost", function(self) self:HighlightText(0, 0) end)
-        sw:SetScript("OnClick", function() PickColor(T(), row.key, function() ApplyAll() RefreshAll() end) end)
+        sw:SetScript("OnClick", function() PickColor(T(), row.key, function() if not isExtra and id ~= "_opts" then T().enabled = true end ApplyAll() RefreshAll() end) end)
         sw:SetScript("OnEnter", function(self) GameTooltip:SetOwner(self, "ANCHOR_TOP") GameTooltip:SetText("Click to pick a color") GameTooltip:Show() end)
         sw:SetScript("OnLeave", function() GameTooltip:Hide() end)
         w.refresh = function()
@@ -1013,7 +1042,7 @@ local function BuildView(id)
         h:SetScript("OnEnter", function() bar:SetVertexColor(1, 1, 1, 0.1) end)
         h:SetScript("OnLeave", function() bar:SetVertexColor(1, 1, 1, 0.05) end)
         it.header = h
-        for _, row in ipairs(sec.rows) do it.rows[#it.rows + 1] = MakeRow(v.body, id, row) end
+        for _, row in ipairs(sec.rows) do it.rows[#it.rows + 1] = MakeRow(v.body, id, row, sec.extra) end
         v.items[#v.items + 1] = it
     end
     return v
