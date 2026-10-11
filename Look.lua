@@ -16,7 +16,7 @@ local LINE = { 0.26, 0.26, 0.31 }
 local DIM = { 0.62, 0.62, 0.68 }
 local BW = 420
 
-local cfg, windows, byId = nil, {}, {}
+local cfg, windows = nil, {}
 local attached = {}          -- id -> frame
 local built = {}             -- id -> options view
 local win, scroll, curTab = nil, nil, nil
@@ -187,20 +187,39 @@ local function Store()
     if not db then return nil end
     db.winlook = db.winlook or {}
     local L = db.winlook
-    if L.sync == nil then L.sync = true end
+    if L.sync == nil then L.sync = not (cfg and cfg.syncDefault == false) end
     L.w = L.w or {}
     L.open = L.open or {}
     return L
 end
 
 -- settings of window id as they apply (everything follows the first window while "sync" is on)
+local byId
+-- a window can carry its own extra options: spec.extra = function() return { defaults = {...}, sections = {...} } end
+local function Extra(spec)
+    if not spec or not spec.extra then return nil end
+    if not spec.extraBuilt then
+        local ok, e = pcall(spec.extra)
+        spec.extraBuilt = ok and e or { defaults = {}, sections = {} }
+    end
+    return spec.extraBuilt
+end
 local function Own(id)
     local L = Store()
     if not L then return nil end
+    local spec = byId and byId[id]
     local w = L.w[id]
-    if not w then w = Defaults() L.w[id] = w end
+    if not w then
+        w = Defaults()
+        if spec and spec.defaultOn then w.enabled = true end
+        L.w[id] = w
+    end
     local d = Defaults()
     for k, v in pairs(d) do if w[k] == nil then w[k] = Copy(v) end end
+    if w.header == nil then w.header = (spec and spec.strip == "template") and true or false end
+    if w.headerSize == nil then w.headerSize = 26 end
+    local e = Extra(spec)
+    if e and e.defaults then for k, v in pairs(e.defaults) do if w[k] == nil then w[k] = Copy(v) end end end
     return w
 end
 local function Eff(id)
@@ -240,9 +259,23 @@ local function Strip(frame, spec, on)
             local o = frame[k]
             if type(o) == "table" and o.Hide then st.shown["x:" .. k] = o:IsShown() and true or false o:Hide() end
         end
+        -- named pieces that are globals, and the frame's own loose textures (mailbox windows)
+        for _, g in ipairs(spec.hideGlobals or {}) do
+            local o = _G[g]
+            if type(o) == "table" and o.SetAlpha then st.alpha = st.alpha or {} st.alpha[o] = o:GetAlpha() o:SetAlpha(0) end
+        end
+        if spec.regions and frame.GetRegions then
+            st.alpha = st.alpha or {}
+            for _, r in ipairs({ frame:GetRegions() }) do
+                if r.GetObjectType and r:GetObjectType() == "Texture" and r.SetAlpha then
+                    st.alpha[r] = r.lookOrigAlpha or r:GetAlpha() r:SetAlpha(0)
+                end
+            end
+        end
     else
         if not st then return end
         frame.lookStrip = nil
+        if st.alpha then for o, a in pairs(st.alpha) do pcall(o.SetAlpha, o, a) end end
         for k, was in pairs(st.shown) do
             local key = k:gsub("^x:", "")
             local o = frame[key]
@@ -344,6 +377,32 @@ local function ApplyOne(spec)
         local e = s.edgeColor
         bg:SetBackdropBorderColor(e[1], e[2], e[3], tonumber(s.edgeAlpha) or 0.95)
         bg:Show()
+        -- a header bar behind the title (replaces the game's own strip)
+        local hd = bg.lookHeader
+        if s.header then
+            if not hd then
+                hd = {}
+                hd.fill = bg:CreateTexture(nil, "ARTWORK")
+                hd.fill:SetTexture(WHITE)
+                hd.line = bg:CreateTexture(nil, "ARTWORK")
+                hd.line:SetTexture(WHITE)
+                bg.lookHeader = hd
+            end
+            local hh = math.max(16, math.min(44, tonumber(s.headerSize) or 26))
+            hd.fill:ClearAllPoints()
+            hd.fill:SetPoint("TOPLEFT", bg, "TOPLEFT", inset, -inset)
+            hd.fill:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -inset, -inset)
+            hd.fill:SetHeight(hh)
+            hd.fill:SetVertexColor(e[1], e[2], e[3], 0.20)
+            hd.line:ClearAllPoints()
+            hd.line:SetPoint("TOPLEFT", hd.fill, "BOTTOMLEFT", 0, 0)
+            hd.line:SetPoint("TOPRIGHT", hd.fill, "BOTTOMRIGHT", 0, 0)
+            hd.line:SetHeight(1)
+            hd.line:SetVertexColor(e[1], e[2], e[3], 0.75)
+            hd.fill:Show() hd.line:Show()
+        elseif hd then
+            hd.fill:Hide() hd.line:Hide()
+        end
         if spec.title then
             local fs = spec.title(frame)
             if fs and fs.SetTextColor then
@@ -360,6 +419,7 @@ local function ApplyOne(spec)
         frame:SetAlpha(math.max(0.1, math.min(1, tonumber(s.frameAlpha) or 1)))
         ApplyFonts(frame, s, true)
         frame.lookLock = s.lock and true or false
+        if spec.apply then Safe(spec.apply, frame, Own(spec.id), true) end
     else
         if bg then bg:Hide() end
         Strip(frame, spec, false)
@@ -371,6 +431,8 @@ local function ApplyOne(spec)
         end
         ApplyFonts(frame, s, false)
         frame.lookLock = false
+        if bg and bg.lookHeader then bg.lookHeader.fill:Hide() bg.lookHeader.line:Hide() end
+        if spec.apply then Safe(spec.apply, frame, Own(spec.id), false) end
     end
 end
 
@@ -395,6 +457,9 @@ function Look.Attach(id, frame)
 end
 
 function Look.Apply() ApplyAll() end
+function Look.Get(id) return Own(id) end
+function Look.Effective(id) return Eff(id) end
+function Look.On(id) local s = Eff(id) return s and s.enabled and true or false end
 
 ----------------------------------------------------------------------
 -- options window: flat widgets
@@ -684,6 +749,8 @@ local SECTIONS = {
         { key = "edgeStyle", kind = "cycle", label = "Border style", values = { "line", "tooltip", "dialog", "none" },
           names = { line = "Thin line", tooltip = "Tooltip style", dialog = "Ornate dialog", none = "None" } },
         { key = "edgeSize", kind = "slider", label = "Line thickness", min = 1, max = 8, step = 1 },
+        { key = "header", kind = "check", label = "Header bar behind the title" },
+        { key = "headerSize", kind = "slider", label = "Header bar height", min = 16, max = 44, step = 1 },
     } },
     { id = "text", title = "Text", rows = {
         { key = "font", kind = "cycle", label = "Font", values = FONT_ORDER, names = FONT_NAMES },
@@ -898,7 +965,11 @@ local function BuildView(id)
     bt:SetJustifyV("TOP")
     bt:SetText("\"Sync all windows\" is on, so this window follows the first window's look. Turn it off at the top to give this window its own.")
     v.banner:Hide()
-    for si, sec in ipairs(SECTIONS) do
+    local all = {}
+    for _, sec in ipairs(SECTIONS) do all[#all + 1] = sec end
+    local ex = Extra(byId[id])
+    if ex and ex.sections then for _, sec in ipairs(ex.sections) do sec.extra = true all[#all + 1] = sec end end
+    for si, sec in ipairs(all) do
         local it = { sec = sec, rows = {}, first = (si == 1) }
         local h = CreateFrame("Button", nil, v.body)
         h:SetSize(BW, 28)
@@ -942,7 +1013,7 @@ Relayout = function(id)
         v.banner:Hide()
     end
     for _, it in ipairs(v.items) do
-        if follow then
+        if follow and not it.sec.extra then
             it.header:Hide()
             for _, r in ipairs(it.rows) do r.frame:Hide() end
         else
