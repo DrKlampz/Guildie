@@ -56,9 +56,29 @@ local BG_ORDER = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "l
 local BG_NAMES = { solid = "Solid color", dark = "Dark panel", parchment = "Parchment", marble = "Marble", rock = "Rock",
     tooltip = "Tooltip", leather = "Leather", stone = "Stone", linen = "Linen", carbon = "Carbon fiber",
     brushed = "Brushed metal", gradient = "Fade, light to dark", custom = "Custom (path below)" }
+-- GreedUI's own textures: offered (and used) only while GreedUI is installed
+local GREED_TEX = {
+    { "g_blackstone", "Black stone (GreedUI)", "Tex_BlackStone", 256 },
+    { "g_slate", "Slate (GreedUI)", "Tex_Slate", 256 },
+    { "g_obsidian", "Obsidian (GreedUI)", "Tex_Obsidian", 256 },
+    { "g_marble", "Dark marble (GreedUI)", "Tex_DarkMarble", 256 },
+    { "g_hammered", "Hammered metal (GreedUI)", "Tex_Hammered", 256 },
+    { "g_weave", "Woven cloth (GreedUI)", "Tex_Weave", 256 },
+    { "g_flecks", "Black with gold flecks (GreedUI)", "Tex_GoldFlecks", 256 },
+}
+local greedAdded = false
+local function EnsureGreedStyles()
+    if greedAdded or not _G.GreedUI then return end
+    greedAdded = true
+    for _, g in ipairs(GREED_TEX) do
+        BG_ORDER[#BG_ORDER + 1] = g[1]
+        BG_NAMES[g[1]] = g[2]
+    end
+end
 local function BgStyles()
+    EnsureGreedStyles()
     local m = (cfg and cfg.media) or ""
-    return {
+    local out = {
         solid     = { WHITE, false, 0 },
         dark      = { "Interface\\DialogFrame\\UI-DialogBox-Background-Dark", true, 32 },
         parchment = { "Interface\\DialogFrame\\UI-DialogBox-Background", true, 32 },
@@ -72,6 +92,8 @@ local function BgStyles()
         brushed   = { m .. "Tex_Brushed", true, 128 },
         gradient  = { m .. "Tex_Gradient", false, 0 },
     }
+    for _, g in ipairs(GREED_TEX) do out[g[1]] = { "Interface\\AddOns\\GreedUI\\Media\\" .. g[3], true, g[4] } end
+    return out
 end
 -- fonts: the game's own, a bundled pack (the LookFonts add-on, if it is installed), and any SharedMedia fonts
 local PACK = "Interface\\AddOns\\LookFonts\\Fonts\\"
@@ -243,15 +265,21 @@ end
 local function Shade(c, f) return { math.min(1, c[1] * f), math.min(1, c[2] * f), math.min(1, c[3] * f) } end
 local function GreedOverlay(w)
     local G = _G.GreedUI
-    local t = G and G.GetTheme and G.GetTheme()
+    local t = G and G.GetTheme and G.GetTheme(cfg and cfg.title)
     if not (t and w) then return w end
     local o = Copy(w)
     o.enabled = true
     o.bgColor, o.alpha = Copy(t.bg), math.max(0.85, tonumber(t.bgAlpha) or 0.92)
     o.edgeColor, o.titleColor, o.edgeAlpha = Copy(t.accent), Copy(t.accent), 1
-    o.bgStyle, o.edgeStyle, o.edgeSize = "solid", "line", tonumber(t.borderSize) or 1
+    o.bgStyle, o.edgeStyle, o.edgeSize = t.bgStyle or "solid", t.edgeStyle or "line", tonumber(t.borderSize) or 1
+    o.bgNoTint = t.bgNoTint ~= false
+    o.edgeAlpha = tonumber(t.edgeAlpha) or 1
+    if t.fontScale then o.fontScale = tonumber(t.fontScale) or 1 end
+    if t.outline ~= nil then o.outline = t.outline and true or false end
     o.buttons, o.btnBgStyle = true, "solid"
-    o.btnColor, o.btnHover = Shade(t.bg, 2.6), Shade(t.bg, 4.2)
+    o.btnGloss, o.btnAlpha = t.btnGloss and true or false, tonumber(t.btnAlpha) or 1
+    local shade = tonumber(t.btnShade) or 2.6
+    o.btnColor, o.btnHover = Shade(t.bg, shade), Shade(t.bg, shade * 1.6)
     o.btnEdgeStyle, o.btnEdgeColor, o.btnEdgeSize = "line", Copy(t.accent), 1
     o.btnTextColor = Shade(t.accent, 1.05)
     if t.font then FONT_PATH["greedui"] = t.font o.font = "greedui" end
