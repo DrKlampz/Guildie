@@ -1,5 +1,8 @@
 # Guildie
 
+## Unreleased
+- New: window customization. Type /guildielook to restyle each window separately (or all together): background textures, colors with copy/paste, opacity sliders, border styles, fonts, scale and position lock. Off until you tick "Use a custom look"; unticking restores the original.
+
 ## v1.9.5
 - Fix: invites that Guildie said it sent but never went out. The game blocks addon code from sending a guild invite, even from a button (the red "Interface action failed because of an AddOn" message). Now the popup's Invite button types `/ginvite Name` into your chat box and you press Enter, which the game allows. Guildie only says "Invited" and sends the welcome and reply after you press Enter on that command. Other chat lines are ignored. If you don't press Enter within 45 seconds, the popup comes back.
 

@@ -434,6 +434,7 @@ local function Build()
     title:SetText("|cff33ff99Guildie|r Armory")
 
     f:SetSize(W, H)
+    if ns.WinLook then ns.WinLook.Attach("armory", f) end
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:SetToplevel(true)

@@ -13,6 +13,8 @@
 ## X-Curse-Project-ID: 1723387
 
 Core.lua
+Look.lua
+LookSetup.lua
 Data.lua
 Armory.lua
 Widgets.lua

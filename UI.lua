@@ -119,6 +119,7 @@ end
 ---------------------------------------------------------------------------
 local function CreateShell()
     local ok, f = pcall(CreateFrame, "Frame", "GuildieFrame", UIParent, "BasicFrameTemplateWithInset")
+
     if not ok or not f then
         f = CreateFrame("Frame", "GuildieFrame", UIParent)
     end
@@ -139,6 +140,7 @@ local function CreateShell()
     title:SetText("|cff33ff99Guildie|r  |cff888888v" .. tostring(ns.VERSION):gsub("^v", "") .. "|r")
 
     f:SetWidth(WIDTH)
+    if ns.WinLook then ns.WinLook.Attach("main", f) end
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:SetToplevel(true)   -- clicking a window raises it (with all its contents) above the other
