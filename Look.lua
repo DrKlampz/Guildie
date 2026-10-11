@@ -239,6 +239,7 @@ end
 local function Eff(id)
     local L = Store()
     if not L then return nil end
+    if id == "_look" then return windows[1] and Own(windows[1].id) or nil end   -- this panel wears the first window's look
     if L.sync and windows[1] then return Own(windows[1].id) end
     return Own(id)
 end
@@ -462,6 +463,7 @@ end
 
 ApplyAll = function()
     for _, spec in ipairs(windows) do Safe(ApplyOne, spec) end
+    if win and byId["_look"] then Safe(ApplyOne, byId["_look"]) end
 end
 
 -- the add-on calls this after it has created a window
@@ -1136,6 +1138,7 @@ local function ShowTab(id)
     if win.syncBox then win.syncBox:SetShown(look) win.syncLbl:SetShown(look) win.syncBtn:SetShown(look) end
     if win.resetBtn then win.resetBtn:SetShown(look) end
     if win.hintTxt then win.hintTxt:SetShown(look) end
+    if byId["_look"] then Safe(ApplyOne, byId["_look"]) end
 end
 
 local function Build()
@@ -1154,6 +1157,7 @@ local function Build()
     t:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
     t:SetPoint("TOPLEFT", 16, -12)
     t:SetText(tostring(cfg.title))
+    win.titleFS = t
     local sub = Text(win, 11, DIM)
     sub:SetPoint("LEFT", t, "RIGHT", 8, -1)
     sub:SetText(cfg.options and "options and look" or "look and feel")
@@ -1251,6 +1255,11 @@ local function Build()
     hint:SetText("Untick \"Use a custom look\" to get the original back.")
     win:SetScript("OnShow", function() if win.DrawSync then win.DrawSync() end RefreshAll() end)
     win:SetScript("OnHide", CloseMenu)
+    -- the options/look panel takes the same colors, background, border and fonts as the first window
+    local pspec = { id = "_look", name = "Look", strip = "backdrop", noScale = true, title = function() return win.titleFS end }
+    byId["_look"] = pspec
+    attached["_look"] = win
+    Safe(ApplyOne, pspec)
     win:Hide()
 end
 
