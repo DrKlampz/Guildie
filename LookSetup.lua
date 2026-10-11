@@ -1,9 +1,8 @@
 local ADDON_NAME, ns = ...
--- Window customization (see Look.lua). Opens with /guildielook.
+-- Window customization (see Look.lua). Opens from the minimap button (Alt-click).
 if not ns.WinLook then return end
 ns.WinLook.Setup({
     title = "Guildie",
-    slash = "guildielook",
     media = "Interface\\AddOns\\Guildie\\media\\",
     db = function() return GuildieDB end,
     windows = {
