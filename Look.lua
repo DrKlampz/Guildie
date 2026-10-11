@@ -65,6 +65,19 @@ local GREED_TEX = {
     { "g_hammered", "Hammered metal (GreedUI)", "Tex_Hammered", 256 },
     { "g_weave", "Woven cloth (GreedUI)", "Tex_Weave", 256 },
     { "g_flecks", "Black with gold flecks (GreedUI)", "Tex_GoldFlecks", 256 },
+    { "g_pitch", "Pitch black (GreedUI)", "Tex_Pitch", 256 },
+    { "g_carbon", "Dark carbon (GreedUI)", "Tex_Carbon", 256 },
+    { "g_leather", "Black leather (GreedUI)", "Tex_Leather", 256 },
+    { "g_midnight", "Midnight blue (GreedUI)", "Tex_Midnight", 256 },
+    { "g_wine", "Wine red (GreedUI)", "Tex_Wine", 256 },
+    { "g_pine", "Deep pine (GreedUI)", "Tex_Pine", 256 },
+    { "g_parchment", "Bright parchment (GreedUI)", "Tex_Parchment", 256 },
+    { "g_ivory", "Ivory marble (GreedUI)", "Tex_Ivory", 256 },
+    { "g_steel", "Bright steel (GreedUI)", "Tex_Steel", 256 },
+    { "g_sand", "Sandstone (GreedUI)", "Tex_Sandstone", 256 },
+    { "g_frost", "Frost white (GreedUI)", "Tex_Frost", 256 },
+    { "g_goldleaf", "Gold leaf (GreedUI)", "Tex_GoldLeaf", 256 },
+    { "g_bronze", "Bronze (GreedUI)", "Tex_Bronze", 256 },
 }
 local greedAdded = false
 local function EnsureGreedStyles()
@@ -269,7 +282,9 @@ local function GreedOverlay(w)
     if not (t and w) then return w end
     local o = Copy(w)
     o.enabled = true
-    o.bgColor, o.alpha = Copy(t.bg), math.max(0.85, tonumber(t.bgAlpha) or 0.92)
+    o.bgColor, o.alpha = Copy(t.bg), math.max(0.2, tonumber(t.bgAlpha) or 0.92)
+    o.bgBright, o.stoneAlpha = tonumber(t.bgBright) or 1, tonumber(t.stoneAlpha) or 0.45
+    o.paper, o.paperColor, o.paperAlpha = t.paper, t.paperColor, t.paperAlpha
     o.edgeColor, o.titleColor, o.edgeAlpha = Copy(t.accent), Copy(t.accent), 1
     o.bgStyle, o.edgeStyle, o.edgeSize = t.bgStyle or "solid", t.edgeStyle or "line", tonumber(t.borderSize) or 1
     o.bgNoTint = t.bgNoTint ~= false
@@ -583,14 +598,23 @@ local function ApplyOne(spec)
         bg:SetBackdrop(backdrop)
         local c = s.bgColor
         if st ~= styles.solid and s.bgNoTint then c = { 1, 1, 1 } end
-        bg:SetBackdropColor(c[1], c[2], c[3], tonumber(s.alpha) or 0.96)
+        local br = tonumber(s.bgBright) or 1
+        bg:SetBackdropColor(math.min(1, c[1] * math.min(1, br)), math.min(1, c[2] * math.min(1, br)), math.min(1, c[3] * math.min(1, br)), tonumber(s.alpha) or 0.96)
+        do   -- brighter than the texture itself: a soft white wash over it
+            if br > 1 then
+                if not bg.lookWash then bg.lookWash = bg:CreateTexture(nil, "BACKGROUND", nil, 2) bg.lookWash:SetTexture(WHITE) end
+                bg.lookWash:ClearAllPoints()
+                bg.lookWash:SetPoint("TOPLEFT", bg, "TOPLEFT", inset, -inset) bg.lookWash:SetPoint("BOTTOMRIGHT", bg, "BOTTOMRIGHT", -inset, inset)
+                bg.lookWash:SetVertexColor(1, 1, 1, math.min(0.6, (br - 1) * 0.6)) bg.lookWash:Show()
+            elseif bg.lookWash then bg.lookWash:Hide() end
+        end
         local e = s.edgeColor
         bg:SetBackdropBorderColor(e[1], e[2], e[3], tonumber(s.edgeAlpha) or 0.95)
         bg:Show()
         do   -- black stone with gold inlay, when GreedUI hands it over
             local GU = _G.GreedUI
             if GU and GU.Inlay and (s.greedStone or s.greedInlay) then
-                GU.Inlay(bg, { inset = inset + 3, studs = s.greedInlay and true or false, stoneAlpha = s.greedStone and 0.45 or 0, lineAlpha = s.greedInlay and 0.5 or 0 })
+                GU.Inlay(bg, { inset = inset + 3, studs = s.greedInlay and true or false, stoneAlpha = s.greedStone and (tonumber(s.stoneAlpha) or 0.45) or 0, lineAlpha = s.greedInlay and 0.5 or 0 })
             elseif GU and GU.InlayOff and bg.greedInlay then GU.InlayOff(bg) end
         end
         -- a header bar behind the title (replaces the game's own strip)
@@ -1562,7 +1586,7 @@ function Look.Setup(c)
         -- GreedUI: show up in its add-on list and follow its look
         local G = _G.GreedUI
         if G and G.RegisterPlugin and cfg and cfg.title ~= "GreedUI" then
-            G.RegisterPlugin(cfg.title, { open = function() Look.Open() end, refresh = function() ApplyAll() end })
+            G.RegisterPlugin(cfg.title, { open = function() Look.Open() end, refresh = function() ApplyAll() end, ext = cfg.ext })
             G.OnTheme(function() ApplyAll() end)
         end
     end)
