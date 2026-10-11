@@ -184,6 +184,9 @@ local function Defaults()
         edgeStyle = "line", edgeSize = 1,
         font = "default", fontScale = 1, outline = false,
         scale = 1, lock = false,
+        buttons = false, btnBgStyle = "solid", btnColor = { 0.16, 0.16, 0.20 }, btnHover = { 0.30, 0.30, 0.38 },
+        btnAlpha = 1, btnEdgeStyle = "line", btnEdgeColor = { 0.88, 0.69, 0.29 }, btnEdgeSize = 1,
+        btnTextColor = { 1, 0.82, 0.2 }, btnGloss = false, btnNoTint = false,
     }
 end
 
@@ -361,6 +364,125 @@ local function ApplyFonts(frame, s, on)
     end)
 end
 
+-- game buttons (the red "panel" buttons) wearing the window's button look
+local function IsPanelButton(b)
+    if not (b.GetObjectType and b:GetObjectType() == "Button") then return false end
+    if b.lookNoSkin or b.lookBtn == false then return false end
+    if b.Left and b.Right then return true end
+    local nt = b.GetNormalTexture and b:GetNormalTexture()
+    local p = nt and nt.GetTexture and nt:GetTexture()
+    return type(p) == "string" and p:find("Panel%-Button") and true or false
+end
+
+local function BtnPaint(b)
+    local k = b.lookBtn
+    if not (k and k.on) then return end
+    local c = k.color
+    if b.IsEnabled and not b:IsEnabled() then
+        k.frame:SetBackdropColor(c[1] * 0.55, c[2] * 0.55, c[3] * 0.55, k.alpha * 0.8)
+    elseif k.down then
+        k.frame:SetBackdropColor(c[1] * 0.7, c[2] * 0.7, c[3] * 0.7, k.alpha)
+    elseif k.over then
+        k.frame:SetBackdropColor(k.hover[1], k.hover[2], k.hover[3], k.alpha)
+    else
+        k.frame:SetBackdropColor(c[1], c[2], c[3], k.alpha)
+    end
+end
+
+local function BtnRegions(b)
+    local list = {}
+    for _, key in ipairs({ "Left", "Middle", "Right", "Center" }) do if b[key] then list[#list + 1] = b[key] end end
+    for _, fn in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetDisabledTexture", "GetHighlightTexture" }) do
+        local t = b[fn] and b[fn](b)
+        if t then list[#list + 1] = t end
+    end
+    return list
+end
+
+local function SkinButton(b, s, on)
+    local k = b.lookBtn
+    if type(k) ~= "table" then
+        if not on then return end
+        k = { orig = {} }
+        b.lookBtn = k
+    end
+    if not on then
+        if k.on then
+            k.on = false
+            if k.frame then k.frame:Hide() end
+            for r, a in pairs(k.orig) do r:SetAlpha(a) end
+            local fs = b.GetFontString and b:GetFontString()
+            if fs and k.textColor then fs:SetTextColor(k.textColor[1], k.textColor[2], k.textColor[3]) end
+        end
+        return
+    end
+    if not k.frame then
+        local f = CreateFrame("Frame", nil, b, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        f:SetAllPoints(b)
+        f:SetFrameLevel(math.max(0, (b:GetFrameLevel() or 1) - 1))
+        f:EnableMouse(false)
+        k.frame = f
+        k.gloss = f:CreateTexture(nil, "ARTWORK")
+        k.gloss:SetTexture(WHITE)
+        k.gloss:SetPoint("TOPLEFT", f, "TOPLEFT", 2, -2)
+        k.gloss:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -2)
+        b:HookScript("OnEnter", function() k.over = true BtnPaint(b) end)
+        b:HookScript("OnLeave", function() k.over = false k.down = false BtnPaint(b) end)
+        b:HookScript("OnMouseDown", function() k.down = true BtnPaint(b) end)
+        b:HookScript("OnMouseUp", function() k.down = false BtnPaint(b) end)
+        b:HookScript("OnShow", function() BtnPaint(b) end)
+        pcall(hooksecurefunc, b, "Enable", function() BtnPaint(b) end)
+        pcall(hooksecurefunc, b, "Disable", function() BtnPaint(b) end)
+        pcall(hooksecurefunc, b, "SetEnabled", function() BtnPaint(b) end)
+    end
+    k.on = true
+    for _, r in ipairs(BtnRegions(b)) do
+        if k.orig[r] == nil then k.orig[r] = r:GetAlpha() or 1 end
+        r:SetAlpha(0)
+    end
+    local styles = BgStyles()
+    local st = styles[s.btnBgStyle] or styles.solid
+    local es = math.max(1, math.min(4, tonumber(s.btnEdgeSize) or 1))
+    local bd = { bgFile = st[1], tile = st[2], tileSize = st[3] }
+    local inset = 0
+    if s.btnEdgeStyle == "tooltip" then bd.edgeFile, bd.edgeSize, inset = "Interface\\Tooltips\\UI-Tooltip-Border", 12, 3
+    elseif s.btnEdgeStyle ~= "none" then bd.edgeFile, bd.edgeSize, inset = WHITE, es, es end
+    bd.insets = { left = inset, right = inset, top = inset, bottom = inset }
+    k.frame:SetBackdrop(bd)
+    k.color = (st ~= styles.solid and s.btnNoTint) and { 1, 1, 1 } or s.btnColor
+    k.hover = (st ~= styles.solid and s.btnNoTint) and { 1, 1, 1 } or s.btnHover
+    k.alpha = tonumber(s.btnAlpha) or 1
+    local e = s.btnEdgeColor
+    k.frame:SetBackdropBorderColor(e[1], e[2], e[3], s.btnEdgeStyle == "none" and 0 or 1)
+    k.gloss:SetHeight(math.max(4, (b:GetHeight() or 22) * 0.45))
+    k.gloss:SetVertexColor(1, 1, 1, 0.10)
+    k.gloss:SetShown(s.btnGloss and true or false)
+    k.frame:Show()
+    local fs = b.GetFontString and b:GetFontString()
+    if fs then
+        if not k.textColor then k.textColor = { fs:GetTextColor() } end
+        local t = s.btnTextColor
+        fs:SetTextColor(t[1], t[2], t[3])
+    end
+    BtnPaint(b)
+end
+
+local function WalkButtons(obj, fn, depth)
+    depth = depth or 0
+    if depth > 8 or not obj.GetChildren then return end
+    for _, c in ipairs({ obj:GetChildren() }) do
+        if c ~= obj.lookBg and not (c.lookBtn and c.lookBtn.frame == c) then
+            if IsPanelButton(c) then fn(c) end
+            WalkButtons(c, fn, depth + 1)
+        end
+    end
+end
+
+local function ApplyButtons(frame, s, on)
+    on = on and s.buttons and true or false
+    WalkButtons(frame, function(b) Safe(SkinButton, b, s, on) end)
+end
+
 local function ApplyOne(spec)
     local frame = attached[spec.id]
     if not frame then return end
@@ -443,6 +565,7 @@ local function ApplyOne(spec)
         if not frame.lookAlpha then frame.lookAlpha = frame:GetAlpha() or 1 end
         frame:SetAlpha(math.max(0.1, math.min(1, tonumber(s.frameAlpha) or 1)))
         Safe(ApplyFonts, frame, s, true)
+        Safe(ApplyButtons, frame, s, true)
         frame.lookLock = s.lock and true or false
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), true) end
     else
@@ -455,6 +578,7 @@ local function ApplyOne(spec)
             if fs and fs.lookTitle then fs:SetTextColor(fs.lookTitle[1], fs.lookTitle[2], fs.lookTitle[3]) fs.lookTitle = nil end
         end
         Safe(ApplyFonts, frame, s, false)
+        Safe(ApplyButtons, frame, s, false)
         frame.lookLock = false
         if bg and bg.lookHeader then bg.lookHeader.fill:Hide() bg.lookHeader.line:Hide() end
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), false) end
@@ -797,6 +921,20 @@ local SECTIONS = {
         { key = "edgeSize", kind = "slider", label = "Line thickness", min = 1, max = 8, step = 1 },
         { key = "header", kind = "check", label = "Header bar behind the title" },
         { key = "headerSize", kind = "slider", label = "Header bar height", min = 16, max = 44, step = 1 },
+    } },
+    { id = "buttons", title = "Buttons", rows = {
+        { key = "buttons", kind = "check", label = "Restyle the buttons in this window" },
+        { key = "btnBgStyle", kind = "cycle", label = "Button background", values = BG_ORDER, names = BG_NAMES },
+        { key = "btnColor", kind = "color", label = "Button color" },
+        { key = "btnHover", kind = "color", label = "Button color under the mouse" },
+        { key = "btnTextColor", kind = "color", label = "Button text" },
+        { key = "btnEdgeColor", kind = "color", label = "Button border" },
+        { key = "btnEdgeStyle", kind = "cycle", label = "Button border style", values = { "line", "tooltip", "none" },
+          names = { line = "Thin line", tooltip = "Tooltip style", none = "None" } },
+        { key = "btnEdgeSize", kind = "slider", label = "Button line thickness", min = 1, max = 4, step = 1 },
+        { key = "btnAlpha", kind = "slider", label = "Button opacity", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "btnGloss", kind = "check", label = "Glossy highlight on the top half" },
+        { key = "btnNoTint", kind = "check", label = "Show textures in their own colors (no tint)" },
     } },
     { id = "text", title = "Text", rows = {
         { key = "font", kind = "cycle", label = "Font", values = FONT_ORDER, names = FONT_NAMES },
