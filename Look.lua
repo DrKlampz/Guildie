@@ -1003,6 +1003,7 @@ local SECTIONS = {
         { key = "titleColor", kind = "color", label = "Title text" },
     } },
     { id = "bg", title = "Background and opacity", rows = {
+        { key = "bgColor", kind = "color", label = "Background color (a solid fill, or the tint of a texture)" },
         { key = "bgStyle", kind = "cycle", label = "Background", values = BG_ORDER, names = BG_NAMES },
         { key = "bgCustom", kind = "text", label = "Custom texture: a file path or a SharedMedia background name",
           hint = "for example  Interface\\AddOns\\SomeAddon\\texture" },
