@@ -56,9 +56,42 @@ local BG_ORDER = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "l
 local BG_NAMES = { solid = "Solid color", dark = "Dark panel", parchment = "Parchment", marble = "Marble", rock = "Rock",
     tooltip = "Tooltip", leather = "Leather", stone = "Stone", linen = "Linen", carbon = "Carbon fiber",
     brushed = "Brushed metal", gradient = "Fade, light to dark", custom = "Custom (path below)" }
+-- GreedUI's own textures: offered (and used) only while GreedUI is installed
+local GREED_TEX = {
+    { "g_blackstone", "Black stone (GreedUI)", "Tex_BlackStone", 256 },
+    { "g_slate", "Slate (GreedUI)", "Tex_Slate", 256 },
+    { "g_obsidian", "Obsidian (GreedUI)", "Tex_Obsidian", 256 },
+    { "g_marble", "Dark marble (GreedUI)", "Tex_DarkMarble", 256 },
+    { "g_hammered", "Hammered metal (GreedUI)", "Tex_Hammered", 256 },
+    { "g_weave", "Woven cloth (GreedUI)", "Tex_Weave", 256 },
+    { "g_flecks", "Black with gold flecks (GreedUI)", "Tex_GoldFlecks", 256 },
+    { "g_pitch", "Pitch black (GreedUI)", "Tex_Pitch", 256 },
+    { "g_carbon", "Dark carbon (GreedUI)", "Tex_Carbon", 256 },
+    { "g_leather", "Black leather (GreedUI)", "Tex_Leather", 256 },
+    { "g_midnight", "Midnight blue (GreedUI)", "Tex_Midnight", 256 },
+    { "g_wine", "Wine red (GreedUI)", "Tex_Wine", 256 },
+    { "g_pine", "Deep pine (GreedUI)", "Tex_Pine", 256 },
+    { "g_parchment", "Bright parchment (GreedUI)", "Tex_Parchment", 256 },
+    { "g_ivory", "Ivory marble (GreedUI)", "Tex_Ivory", 256 },
+    { "g_steel", "Bright steel (GreedUI)", "Tex_Steel", 256 },
+    { "g_sand", "Sandstone (GreedUI)", "Tex_Sandstone", 256 },
+    { "g_frost", "Frost white (GreedUI)", "Tex_Frost", 256 },
+    { "g_goldleaf", "Gold leaf (GreedUI)", "Tex_GoldLeaf", 256 },
+    { "g_bronze", "Bronze (GreedUI)", "Tex_Bronze", 256 },
+}
+local greedAdded = false
+local function EnsureGreedStyles()
+    if greedAdded or not _G.GreedUI then return end
+    greedAdded = true
+    for _, g in ipairs(GREED_TEX) do
+        BG_ORDER[#BG_ORDER + 1] = g[1]
+        BG_NAMES[g[1]] = g[2]
+    end
+end
 local function BgStyles()
+    EnsureGreedStyles()
     local m = (cfg and cfg.media) or ""
-    return {
+    local out = {
         solid     = { WHITE, false, 0 },
         dark      = { "Interface\\DialogFrame\\UI-DialogBox-Background-Dark", true, 32 },
         parchment = { "Interface\\DialogFrame\\UI-DialogBox-Background", true, 32 },
@@ -72,6 +105,8 @@ local function BgStyles()
         brushed   = { m .. "Tex_Brushed", true, 128 },
         gradient  = { m .. "Tex_Gradient", false, 0 },
     }
+    for _, g in ipairs(GREED_TEX) do out[g[1]] = { "Interface\\AddOns\\GreedUI\\Media\\" .. g[3], true, g[4] } end
+    return out
 end
 -- fonts: the game's own, a bundled pack (the LookFonts add-on, if it is installed), and any SharedMedia fonts
 local PACK = "Interface\\AddOns\\LookFonts\\Fonts\\"
@@ -239,12 +274,43 @@ local function Own(id)
     if e and e.defaults then for k, v in pairs(e.defaults) do if w[k] == nil then w[k] = Copy(v) end end end
     return w
 end
+-- GreedUI (when it is installed and "dress my add-ons" is on) hands every window its colors, font and button look
+-- brighter by a factor, with a floor lift so a pure black panel still gets visibly lighter buttons
+local function Shade(c, f) local k = f > 1 and (f - 1) * 0.03 or 0 return { math.min(1, c[1] * f + k), math.min(1, c[2] * f + k), math.min(1, c[3] * f + k) } end
+local function GreedOverlay(w)
+    local G = _G.GreedUI
+    local t = G and G.GetTheme and G.GetTheme(cfg and cfg.title)
+    if not (t and w) then return w end
+    local o = Copy(w)
+    o.enabled = true
+    o.bgColor, o.alpha = Copy(t.bg), math.max(0.2, tonumber(t.bgAlpha) or 0.92)
+    o.bgBright, o.stoneAlpha = tonumber(t.bgBright) or 1, tonumber(t.stoneAlpha) or 0.45
+    o.paper, o.paperColor, o.paperAlpha = t.paper, t.paperColor, t.paperAlpha
+    o.edgeColor, o.titleColor, o.edgeAlpha = Copy(t.accent), Copy(t.accent), 1
+    o.bgStyle, o.edgeStyle, o.edgeSize = t.bgStyle or "solid", t.edgeStyle or "line", tonumber(t.borderSize) or 1
+    o.bgNoTint = t.bgNoTint ~= false
+    o.edgeAlpha = tonumber(t.edgeAlpha) or 1
+    if t.fontScale then o.fontScale = tonumber(t.fontScale) or 1 end
+    if t.outline ~= nil then o.outline = t.outline and true or false end
+    o.buttons, o.btnBgStyle = true, "solid"
+    o.btnGloss, o.btnAlpha = t.btnGloss and true or false, tonumber(t.btnAlpha) or 1
+    local shade = tonumber(t.btnShade) or 2.6
+    o.btnColor, o.btnHover = Shade(t.bg, shade), Shade(t.bg, shade * 1.6)
+    o.btnEdgeStyle, o.btnEdgeColor, o.btnEdgeSize = "line", Copy(t.accent), 1
+    o.btnTextColor = Shade(t.accent, 1.05)
+    if t.font then FONT_PATH["greedui"] = t.font o.font = "greedui" end
+    o.greedStone, o.greedInlay = t.stone, t.inlay
+    return o
+end
 local function Eff(id)
     local L = Store()
     if not L then return nil end
-    if id == "_look" then return windows[1] and Own(windows[1].id) or nil end   -- this panel wears the first window's look
-    if L.sync and windows[1] then return Own(windows[1].id) end
-    return Own(id)
+    if id == "_look" then   -- this panel wears the first window's look
+        if windows[1] then return GreedOverlay(Own(windows[1].id)) end
+        return GreedOverlay(Defaults())
+    end
+    if L.sync and windows[1] then return GreedOverlay(Own(windows[1].id)) end
+    return GreedOverlay(Own(id))
 end
 
 ----------------------------------------------------------------------
@@ -344,7 +410,8 @@ local function WalkFonts(obj, fn, depth)
     end
 end
 
-local function ApplyFonts(frame, s, on)
+local function ApplyFonts(frame, s, on, spec)
+    local skip = spec and spec.skinSkip
     WalkFonts(frame, function(fs)
         if not fs.GetFont or not fs.SetFont then return end
         if not fs.lookFont then
@@ -353,7 +420,8 @@ local function ApplyFonts(frame, s, on)
             fs.lookFont = { path, size or 12, flags or "" }
         end
         local o = fs.lookFont
-        if on then
+        local useOn = on and not (skip and skip(fs))
+        if useOn then
             local path = FONT_PATH[s.font] or o[1]
             local flags = o[3]
             if s.outline and not tostring(flags):find("OUTLINE") then flags = (flags ~= "" and (flags .. ",") or "") .. "OUTLINE" end
@@ -365,10 +433,18 @@ local function ApplyFonts(frame, s, on)
 end
 
 -- game buttons (the red "panel" buttons) wearing the window's button look
+local skinAll, skinSkip = false, nil   -- a window can ask for every labelled button to be skinned (the auction house's own pages)
 local function IsPanelButton(b)
     if not (b.GetObjectType and b:GetObjectType() == "Button") then return false end
     if b.lookNoSkin or b.lookBtn == false then return false end
     if b.Left and b.Right then return true end
+    if type(b.lookBtn) == "table" and b.lookBtn.on then return true end
+    if skinAll then
+        local fs = b.GetFontString and b:GetFontString()
+        local w, h = b:GetWidth() or 0, b:GetHeight() or 0
+        local nm = b.GetName and b:GetName() or ""
+        if fs and fs:GetText() and fs:GetText() ~= "" and w >= 40 and h >= 16 and h <= 44 and not nm:find("Tab") and not b.GetItemButtonCount then return true end
+    end
     local nt = b.GetNormalTexture and b:GetNormalTexture()
     local p = nt and nt.GetTexture and nt:GetTexture()
     return type(p) == "string" and p:find("Panel%-Button") and true or false
@@ -478,9 +554,12 @@ local function WalkButtons(obj, fn, depth)
     end
 end
 
-local function ApplyButtons(frame, s, on)
+local function ApplyButtons(frame, s, on, spec)
     on = on and s.buttons and true or false
-    WalkButtons(frame, function(b) Safe(SkinButton, b, s, on) end)
+    skinAll = spec and spec.skinAll and true or false
+    skinSkip = spec and spec.skinSkip
+    WalkButtons(frame, function(b) Safe(SkinButton, b, s, on and not (skinSkip and skinSkip(b))) end)
+    skinAll, skinSkip = false, nil
 end
 
 local function ApplyOne(spec)
@@ -520,10 +599,25 @@ local function ApplyOne(spec)
         bg:SetBackdrop(backdrop)
         local c = s.bgColor
         if st ~= styles.solid and s.bgNoTint then c = { 1, 1, 1 } end
-        bg:SetBackdropColor(c[1], c[2], c[3], tonumber(s.alpha) or 0.96)
+        local br = tonumber(s.bgBright) or 1
+        bg:SetBackdropColor(math.min(1, c[1] * math.min(1, br)), math.min(1, c[2] * math.min(1, br)), math.min(1, c[3] * math.min(1, br)), tonumber(s.alpha) or 0.96)
+        do   -- brighter than the texture itself: a soft white wash over it
+            if br > 1 then
+                if not bg.lookWash then bg.lookWash = bg:CreateTexture(nil, "BACKGROUND", nil, 2) bg.lookWash:SetTexture(WHITE) end
+                bg.lookWash:ClearAllPoints()
+                bg.lookWash:SetPoint("TOPLEFT", bg, "TOPLEFT", inset, -inset) bg.lookWash:SetPoint("BOTTOMRIGHT", bg, "BOTTOMRIGHT", -inset, inset)
+                bg.lookWash:SetVertexColor(1, 1, 1, math.min(0.6, (br - 1) * 0.6)) bg.lookWash:Show()
+            elseif bg.lookWash then bg.lookWash:Hide() end
+        end
         local e = s.edgeColor
         bg:SetBackdropBorderColor(e[1], e[2], e[3], tonumber(s.edgeAlpha) or 0.95)
         bg:Show()
+        do   -- black stone with gold inlay, when GreedUI hands it over
+            local GU = _G.GreedUI
+            if GU and GU.Inlay and (s.greedStone or s.greedInlay) then
+                GU.Inlay(bg, { inset = inset + 3, studs = s.greedInlay and true or false, stoneAlpha = s.greedStone and (tonumber(s.stoneAlpha) or 0.45) or 0, lineAlpha = s.greedInlay and 0.5 or 0 })
+            elseif GU and GU.InlayOff and bg.greedInlay then GU.InlayOff(bg) end
+        end
         -- a header bar behind the title (replaces the game's own strip)
         local hd = bg.lookHeader
         if s.header then
@@ -564,12 +658,13 @@ local function ApplyOne(spec)
         end
         if not frame.lookAlpha then frame.lookAlpha = frame:GetAlpha() or 1 end
         frame:SetAlpha(math.max(0.1, math.min(1, tonumber(s.frameAlpha) or 1)))
-        Safe(ApplyFonts, frame, s, true)
-        Safe(ApplyButtons, frame, s, true)
+        Safe(ApplyFonts, frame, s, true, spec)
+        Safe(ApplyButtons, frame, s, true, spec)
         frame.lookLock = s.lock and true or false
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), true) end
     else
         if bg then bg:Hide() end
+        if bg and bg.greedInlay and _G.GreedUI and _G.GreedUI.InlayOff then _G.GreedUI.InlayOff(bg) end
         Safe(Strip, frame, spec, false)
         if frame.lookScale then frame:SetScale(frame.lookScale) frame.lookScale = nil end
         if frame.lookAlpha then frame:SetAlpha(frame.lookAlpha) frame.lookAlpha = nil end
@@ -577,8 +672,8 @@ local function ApplyOne(spec)
             local fs = spec.title(frame)
             if fs and fs.lookTitle then fs:SetTextColor(fs.lookTitle[1], fs.lookTitle[2], fs.lookTitle[3]) fs.lookTitle = nil end
         end
-        Safe(ApplyFonts, frame, s, false)
-        Safe(ApplyButtons, frame, s, false)
+        Safe(ApplyFonts, frame, s, false, spec)
+        Safe(ApplyButtons, frame, s, false, spec)
         frame.lookLock = false
         if bg and bg.lookHeader then bg.lookHeader.fill:Hide() bg.lookHeader.line:Hide() end
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), false) end
@@ -908,6 +1003,7 @@ local SECTIONS = {
         { key = "titleColor", kind = "color", label = "Title text" },
     } },
     { id = "bg", title = "Background and opacity", rows = {
+        { key = "bgColor", kind = "color", label = "Background color (a solid fill, or the tint of a texture)" },
         { key = "bgStyle", kind = "cycle", label = "Background", values = BG_ORDER, names = BG_NAMES },
         { key = "bgCustom", kind = "text", label = "Custom texture: a file path or a SharedMedia background name",
           hint = "for example  Interface\\AddOns\\SomeAddon\\texture" },
@@ -1488,6 +1584,12 @@ function Look.Setup(c)
         for _, spec in ipairs(windows) do
             local fr = spec.global and _G[spec.global]
             if fr then Look.Attach(spec.id, fr) end
+        end
+        -- GreedUI: show up in its add-on list and follow its look
+        local G = _G.GreedUI
+        if G and G.RegisterPlugin and cfg and cfg.title ~= "GreedUI" then
+            G.RegisterPlugin(cfg.title, { open = function() Look.Open() end, refresh = function() ApplyAll() end, ext = cfg.ext })
+            G.OnTheme(function() ApplyAll() end)
         end
     end)
 end
