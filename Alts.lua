@@ -23,9 +23,18 @@ function Alts.GroupOf(key)
     local d = ns.GuildData()
     if not d then return { key } end
     local main = d.alts[key] or key
+    -- a deleted character leaves the guild roster, so only list characters that are still in it
+    -- (skipped while the roster hasn't loaded yet; the one being looked at always stays)
+    local roster = ns.RosterSet and ns.RosterSet()
+    local function Alive(k) return k == key or not roster or next(roster) == nil or roster[k] ~= nil end
     local list = { main }
     for k, m in pairs(d.alts) do
-        if m == main and k ~= main then list[#list + 1] = k end
+        if m == main and k ~= main and Alive(k) then list[#list + 1] = k end
+    end
+    if not Alive(main) then
+        table.remove(list, 1)
+        if #list == 0 then list[1] = key end
+        main = list[1]
     end
     table.sort(list, function(a, b)
         if a == main then return true end
