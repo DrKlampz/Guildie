@@ -254,7 +254,7 @@ function D.NoticeJoin()
     local me = MyKey()
     local last = ns.db.guildSeen[me]
     ns.db.guildSeen[me] = g
-    if last == "none" or (last and last ~= g) then
+    if (last == "none" or (last and last ~= g)) and not D.MyJoin() then
         -- you were guildless (or in another guild) and now you're in this one: you joined, today
         D.SetJoin(me, Noon(Today()), "self", me)
         ns.Print("Logged today as the day you joined " .. g .. ". If that's wrong, fix it with /guildie joined <date>.")
@@ -264,7 +264,7 @@ function D.NoticeJoin()
 end
 
 function D.NoteGuildless()
-    if ns.db and not IsInGuild() then
+    if ns.db and not IsInGuild() and not (GetGuildInfo and GetGuildInfo("player")) then
         ns.db.guildSeen = ns.db.guildSeen or {}
         ns.db.guildSeen[MyKey()] = "none"
     end
