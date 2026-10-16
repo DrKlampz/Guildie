@@ -222,6 +222,7 @@ local function Defaults()
         buttons = false, btnBgStyle = "solid", btnColor = { 0.16, 0.16, 0.20 }, btnHover = { 0.30, 0.30, 0.38 },
         btnAlpha = 1, btnEdgeStyle = "line", btnEdgeColor = { 0.88, 0.69, 0.29 }, btnEdgeSize = 1,
         btnTextColor = { 1, 0.82, 0.2 }, btnGloss = false, btnNoTint = false,
+        follow = true, edgeFx = "none", depth = 0, topLight = 0, texScale = 1, flair = "gilded", pulse = false,
     }
 end
 
@@ -241,6 +242,16 @@ local function Store()
     if cfg and cfg.syncDefault == false and not L.syncReset then L.sync = false L.syncReset = true end
     L.w = L.w or {}
     L.open = L.open or {}
+    -- once: dress up windows that were left plain (look switched off, or no flair) with the gilded trim
+    if not L.pizzazz1 then
+        L.pizzazz1 = true
+        for _, w in pairs(L.w) do
+            if type(w) == "table" then
+                if w.enabled == false then w.enabled = true end
+                if w.flair == nil or w.flair == "none" then w.flair = "gilded" end
+            end
+        end
+    end
     return L
 end
 
@@ -278,6 +289,7 @@ end
 -- brighter by a factor, with a floor lift so a pure black panel still gets visibly lighter buttons
 local function Shade(c, f) local k = f > 1 and (f - 1) * 0.03 or 0 return { math.min(1, c[1] * f + k), math.min(1, c[2] * f + k), math.min(1, c[3] * f + k) } end
 local function GreedOverlay(w)
+    if w and w.follow == false then return w end   -- this window keeps its own look
     local G = _G.GreedUI
     local t = G and G.GetTheme and G.GetTheme(cfg and cfg.title)
     if not (t and w) then return w end
@@ -562,6 +574,117 @@ local function ApplyButtons(frame, s, on, spec)
     skinAll, skinSkip = false, nil
 end
 
+-- extra polish drawn over the background: inner shadow (depth), light from above, and finer border styles
+local function Fx(bg, s, inset, e)
+    local fx = bg.lookFx
+    if not fx then fx = { t = {} } bg.lookFx = fx end
+    local n = 0
+    local function T()
+        n = n + 1
+        local t = fx.t[n]
+        if not t then
+            t = bg:CreateTexture(nil, "BACKGROUND", nil, 3)
+            t:SetTexture(WHITE)
+            fx.t[n] = t
+        end
+        t:ClearAllPoints()
+        if t.SetGradient then pcall(t.SetGradient, t, "VERTICAL", CreateColor(1, 1, 1, 1), CreateColor(1, 1, 1, 1)) end
+        t:Show()
+        return t
+    end
+    local function Grad(t, orient, r, g, b, lowA, highA)
+        if t.SetGradient and CreateColor then pcall(t.SetGradient, t, orient, CreateColor(r, g, b, lowA), CreateColor(r, g, b, highA))
+        elseif t.SetGradientAlpha then pcall(t.SetGradientAlpha, t, orient, r, g, b, lowA, r, g, b, highA) end
+    end
+    local function Line(side, th, off, r, g, b, a)
+        local t = T()
+        t:SetVertexColor(r, g, b, a)
+        if side == "T" then t:SetPoint("TOPLEFT", bg, "TOPLEFT", off, -off) t:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -off, -off) t:SetHeight(th)
+        elseif side == "B" then t:SetPoint("BOTTOMLEFT", bg, "BOTTOMLEFT", off, off) t:SetPoint("BOTTOMRIGHT", bg, "BOTTOMRIGHT", -off, off) t:SetHeight(th)
+        elseif side == "L" then t:SetPoint("TOPLEFT", bg, "TOPLEFT", off, -off) t:SetPoint("BOTTOMLEFT", bg, "BOTTOMLEFT", off, off) t:SetWidth(th)
+        else t:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -off, -off) t:SetPoint("BOTTOMRIGHT", bg, "BOTTOMRIGHT", -off, off) t:SetWidth(th) end
+        return t
+    end
+    local depth = math.max(0, math.min(1, tonumber(s.depth) or 0))
+    if depth > 0 then
+        local th = 14 + depth * 46
+        local a = depth * 0.7
+        local t = Line("T", th, inset, 0, 0, 0, 1) Grad(t, "VERTICAL", 0, 0, 0, 0, a)
+        t = Line("B", th, inset, 0, 0, 0, 1) Grad(t, "VERTICAL", 0, 0, 0, a, 0)
+        t = Line("L", th, inset, 0, 0, 0, 1) Grad(t, "HORIZONTAL", 0, 0, 0, a, 0)
+        t = Line("R", th, inset, 0, 0, 0, 1) Grad(t, "HORIZONTAL", 0, 0, 0, 0, a)
+    end
+    local light = math.max(0, math.min(1, tonumber(s.topLight) or 0))
+    if light > 0 then
+        local t = Line("T", 70, inset, 1, 1, 1, 1)
+        Grad(t, "VERTICAL", 1, 1, 1, 0, light * 0.28)
+    end
+    local style = s.edgeFx or "none"
+    local i0 = inset
+    if style == "soft" then
+        Line("T", 1, i0, 0, 0, 0, 0.55) Line("B", 1, i0, 0, 0, 0, 0.55) Line("L", 1, i0, 0, 0, 0, 0.55) Line("R", 1, i0, 0, 0, 0, 0.55)
+        for k = 1, 2 do
+            local a = 0.22 / k
+            Line("T", 1, -k, e[1], e[2], e[3], a) Line("B", 1, -k, e[1], e[2], e[3], a) Line("L", 1, -k, e[1], e[2], e[3], a) Line("R", 1, -k, e[1], e[2], e[3], a)
+        end
+    elseif style == "bevel" then
+        Line("T", 1, i0, 1, 1, 1, 0.30) Line("L", 1, i0, 1, 1, 1, 0.22)
+        Line("B", 1, i0, 0, 0, 0, 0.50) Line("R", 1, i0, 0, 0, 0, 0.40)
+    elseif style == "double" then
+        local o = i0 + 3
+        Line("T", 1, o, e[1], e[2], e[3], 0.65) Line("B", 1, o, e[1], e[2], e[3], 0.65) Line("L", 1, o, e[1], e[2], e[3], 0.65) Line("R", 1, o, e[1], e[2], e[3], 0.65)
+    elseif style == "glow" then
+        for k = 1, 4 do
+            local a = 0.30 / k
+            Line("T", 1, -k, e[1], e[2], e[3], a) Line("B", 1, -k, e[1], e[2], e[3], a) Line("L", 1, -k, e[1], e[2], e[3], a) Line("R", 1, -k, e[1], e[2], e[3], a)
+        end
+    end
+
+    -- flair: a gilded inner line with corner studs ("gilded"), or a second line and diamond corners ("royal")
+    local flair = s.flair or "none"
+    fx.studs = fx.studs or {}
+    for _, st in ipairs(fx.studs) do st:Hide() end
+    if flair == "gilded" or flair == "royal" then
+        Line("T", 1, i0 + 3, e[1], e[2], e[3], 0.55) Line("B", 1, i0 + 3, e[1], e[2], e[3], 0.55)
+        Line("L", 1, i0 + 3, e[1], e[2], e[3], 0.55) Line("R", 1, i0 + 3, e[1], e[2], e[3], 0.55)
+        if flair == "royal" then
+            Line("T", 1, i0 + 6, e[1], e[2], e[3], 0.28) Line("B", 1, i0 + 6, e[1], e[2], e[3], 0.28)
+            Line("L", 1, i0 + 6, e[1], e[2], e[3], 0.28) Line("R", 1, i0 + 6, e[1], e[2], e[3], 0.28)
+        end
+        local sz = flair == "royal" and 7 or 5
+        local o = i0 + 2
+        local corners = { { "TOPLEFT", o, -o }, { "TOPRIGHT", -o, -o }, { "BOTTOMLEFT", o, o }, { "BOTTOMRIGHT", -o, o } }
+        for k, c in ipairs(corners) do
+            local st = fx.studs[k]
+            if not st then
+                st = bg:CreateTexture(nil, "OVERLAY", nil, 2)
+                st:SetTexture(WHITE)
+                fx.studs[k] = st
+            end
+            st:ClearAllPoints()
+            st:SetPoint("CENTER", bg, c[1], c[2] + (c[2] > 0 and sz / 2 or -sz / 2), c[3] + (c[3] > 0 and sz / 2 or -sz / 2))
+            st:SetSize(sz, sz)
+            st:SetVertexColor(e[1], e[2], e[3], 0.95)
+            if st.SetRotation then st:SetRotation(flair == "royal" and math.rad(45) or 0) end
+            st:Show()
+        end
+    end
+    -- optional slow pulse of the studs and the glow
+    if not fx.pulser then
+        fx.pulser = CreateFrame("Frame", nil, bg)
+        fx.pulser.t = 0
+        fx.pulser:SetScript("OnUpdate", function(self, dt)
+            if not self.on then return end
+            self.t = self.t + dt
+            local k = 0.65 + 0.35 * math.sin(self.t * 2.2)
+            for _, st in ipairs(fx.studs or {}) do if st:IsShown() then st:SetAlpha(k) end end
+        end)
+    end
+    fx.pulser.on = s.pulse and true or false
+    if not s.pulse then for _, st in ipairs(fx.studs) do st:SetAlpha(1) end end
+    for i = n + 1, #fx.t do fx.t[i]:Hide() end
+end
+
 local function ApplyOne(spec)
     local frame = attached[spec.id]
     if not frame then return end
@@ -586,7 +709,7 @@ local function ApplyOne(spec)
             end
         end
         local es = math.max(1, math.min(8, tonumber(s.edgeSize) or 1))
-        local backdrop = { bgFile = st[1], tile = st[2], tileSize = st[3] }
+        local backdrop = { bgFile = st[1], tile = st[2], tileSize = st[2] and math.max(8, math.floor((st[3] or 256) * math.max(0.25, math.min(3, tonumber(s.texScale) or 1)) + 0.5)) or st[3] }
         local inset = 0
         if s.edgeStyle == "tooltip" then
             backdrop.edgeFile, backdrop.edgeSize, inset = "Interface\\Tooltips\\UI-Tooltip-Border", 16, 4
@@ -611,6 +734,7 @@ local function ApplyOne(spec)
         end
         local e = s.edgeColor
         bg:SetBackdropBorderColor(e[1], e[2], e[3], tonumber(s.edgeAlpha) or 0.95)
+        Safe(Fx, bg, s, inset, e)
         bg:Show()
         do   -- black stone with gold inlay, when GreedUI hands it over
             local GU = _G.GreedUI
@@ -664,6 +788,7 @@ local function ApplyOne(spec)
         if spec.apply then Safe(spec.apply, frame, Own(spec.id), true) end
     else
         if bg then bg:Hide() end
+        if bg and bg.lookFx then for _, t in ipairs(bg.lookFx.t) do t:Hide() end end
         if bg and bg.greedInlay and _G.GreedUI and _G.GreedUI.InlayOff then _G.GreedUI.InlayOff(bg) end
         Safe(Strip, frame, spec, false)
         if frame.lookScale then frame:SetScale(frame.lookScale) frame.lookScale = nil end
@@ -992,6 +1117,7 @@ local FONT_NAMES = FONTS
 local SECTIONS = {
     { id = "use", title = "This window", rows = {
         { key = "enabled", kind = "check", label = "Use a custom look for this window" },
+        { key = "follow", kind = "check", label = "Follow GreedUI's look (untick to use this window's own colors and opacity)" },
         { key = "scale", kind = "slider", label = "Window size (scale)", min = 0.5, max = 1.8, step = 0.05, fmt = "%.2f" },
         { key = "frameAlpha", kind = "slider", label = "See-through (whole window)", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "lock", kind = "check", label = "Lock the window in place" },
@@ -1010,10 +1136,18 @@ local SECTIONS = {
         { key = "bgNoTint", kind = "check", label = "Show textures in their own colors (no tint)" },
         { key = "alpha", kind = "slider", label = "Background opacity", min = 0, max = 1, step = 0.02, fmt = "%.2f" },
         { key = "edgeAlpha", kind = "slider", label = "Border opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "texScale", kind = "slider", label = "Texture tile size (smaller = finer)", min = 0.25, max = 3, step = 0.05, fmt = "%.2f" },
+        { key = "depth", kind = "slider", label = "Depth (darker toward the edges)", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "topLight", kind = "slider", label = "Light from above", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
     } },
     { id = "border", title = "Border", rows = {
         { key = "edgeStyle", kind = "cycle", label = "Border style", values = { "line", "tooltip", "dialog", "none" },
           names = { line = "Thin line", tooltip = "Tooltip style", dialog = "Ornate dialog", none = "None" } },
+        { key = "edgeFx", kind = "cycle", label = "Edge finish", values = { "none", "soft", "bevel", "double", "glow" },
+          names = { none = "Plain", soft = "Soft (inner shadow and faint glow)", bevel = "Bevel (raised)", double = "Double line", glow = "Glow" } },
+        { key = "flair", kind = "cycle", label = "Flair (gold trim)", values = { "none", "gilded", "royal" },
+          names = { none = "None", gilded = "Gilded line and studs", royal = "Royal: double line and diamond corners" } },
+        { key = "pulse", kind = "check", label = "Pulse the flair" },
         { key = "edgeSize", kind = "slider", label = "Line thickness", min = 1, max = 8, step = 1 },
         { key = "header", kind = "check", label = "Header bar behind the title" },
         { key = "headerSize", kind = "slider", label = "Header bar height", min = 16, max = 44, step = 1 },
