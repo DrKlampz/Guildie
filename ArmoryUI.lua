@@ -284,8 +284,24 @@ local function ShowDetail(e)
                 local b, ent = d.altBtns[n], EntryFor(k)
                 b.key = k
                 b.text:SetText(ent and ("|c" .. ClassHex(ent.class) .. ent.name .. "|r") or k)
+                b.text:SetWidth(0)
                 b:SetWidth(math.max(60, b.text:GetStringWidth() + 14))
                 b:Show()
+            end
+        end
+        -- keep the row inside the window: shrink the buttons (names get cut with ...) when they would run off
+        local avail = (d:GetWidth() or 480) - (d.altsLabel:GetStringWidth() or 60) - 12
+        local total, shown = 0, {}
+        for i = 1, #d.altBtns do
+            local b = d.altBtns[i]
+            if b:IsShown() then shown[#shown + 1] = b total = total + b:GetWidth() + 4 end
+        end
+        if total > avail and #shown > 0 then
+            local each = math.max(34, math.floor(avail / #shown) - 4)
+            for _, b in ipairs(shown) do
+                if b:GetWidth() > each then b:SetWidth(each) end
+                b.text:SetWordWrap(false)
+                b.text:SetWidth(b:GetWidth() - 6)
             end
         end
     end
