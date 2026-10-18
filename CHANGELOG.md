@@ -1,7 +1,7 @@
 # Guildie
 
 ## v1.11.0
-- Armory: the "Also plays" buttons now show each character's professions in shorthand (LW, ECH, ALC...). Guildie records your professions on every character you log in on and shares them with the guild, so log in once on each character to fill them in.
+- Armory: the "Also plays" buttons now show each character's professions in shorthand (LW, ECH, ALC...; main professions only). Guildie records your professions on every character you log in on and shares them with the guild, so log in once on each character to fill them in.
 
 ## v1.10.3
 - Alts: characters that are no longer in the guild roster (deleted) are hidden.

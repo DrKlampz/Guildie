@@ -185,8 +185,7 @@ function A.ProfShort(rec)
         local name = type(p) == "string" and p:match("^([^:]+):")
         if name then have[PROF_SHORT[name] or name:sub(1, 3):upper()] = true end
     end
-    for _, ab in ipairs(PROF_ORDER) do if have[ab] then out[#out + 1] = ab have[ab] = nil end end
-    for ab in pairs(have) do out[#out + 1] = ab end
+    for i = 1, 8 do local ab = PROF_ORDER[i] if have[ab] then out[#out + 1] = ab end end   -- main professions only
     return table.concat(out, " ")
 end
 
