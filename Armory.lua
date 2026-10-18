@@ -171,6 +171,25 @@ local function CollectProfessions()
 end
 A.CollectProfessions = CollectProfessions
 
+-- Professions in shorthand (LW, ECH...), shown next to a character's name on the alt buttons.
+local PROF_SHORT = {
+    Blacksmithing = "BS", Leatherworking = "LW", Alchemy = "ALC", Herbalism = "HRB", Mining = "MIN",
+    Tailoring = "TAI", Engineering = "ENG", Enchanting = "ECH", Skinning = "SKN", Jewelcrafting = "JC",
+    Inscription = "INS", Cooking = "COOK", ["First Aid"] = "FA", Fishing = "FSH", Archaeology = "ARC",
+}
+local PROF_ORDER = { "BS", "LW", "ALC", "TAI", "ENG", "ECH", "JC", "INS", "HRB", "MIN", "SKN", "COOK", "FA", "FSH", "ARC" }
+function A.ProfShort(rec)
+    if type(rec) ~= "table" or type(rec.professions) ~= "table" then return "" end
+    local have, out = {}, {}
+    for _, p in ipairs(rec.professions) do
+        local name = type(p) == "string" and p:match("^([^:]+):")
+        if name then have[PROF_SHORT[name] or name:sub(1, 3):upper()] = true end
+    end
+    for _, ab in ipairs(PROF_ORDER) do if have[ab] then out[#out + 1] = ab have[ab] = nil end end
+    for ab in pairs(have) do out[#out + 1] = ab end
+    return table.concat(out, " ")
+end
+
 local function ClassFile(unit)
     local ok, _, file = pcall(UnitClass, unit)
     if ok and file and not IsSecret(file) then return file end

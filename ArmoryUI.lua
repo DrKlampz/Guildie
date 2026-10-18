@@ -283,7 +283,8 @@ local function ShowDetail(e)
                 n = n + 1
                 local b, ent = d.altBtns[n], EntryFor(k)
                 b.key = k
-                b.text:SetText(ent and ("|c" .. ClassHex(ent.class) .. ent.name .. "|r") or k)
+                local sh = ent and A.ProfShort and A.ProfShort(ent.rec) or ""
+                b.text:SetText((ent and ("|c" .. ClassHex(ent.class) .. ent.name .. "|r") or k) .. (sh ~= "" and ("  |cff9a9a9a" .. sh .. "|r") or ""))
                 b.text:SetWidth(0)
                 b:SetWidth(math.max(60, b.text:GetStringWidth() + 14))
                 b:Show()
