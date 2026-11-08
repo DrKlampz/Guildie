@@ -194,6 +194,9 @@ local function Build()
     Edit("welcomeText", "Message  |cff888888({name}, {guild})|r", 360,
         "{name} = the new member, {guild} = your guild's name. Max 255 characters.",
         false, 24, "welcomeEnabled")
+    Edit("welcomeWhisperText", "Whisper instead  |cff888888(when guild chat is blocked)|r", 360,
+        "The game blocks add-ons from posting in guild chat, so Guildie whispers this to the new member instead. {name} = the new member, {guild} = your guild's name.",
+        false, 24, "welcomeEnabled")
     Check("welcomeOnlyMine", "Only welcome players Guildie invited",
         "Recommended if other officers also run Guildie, so new members don't get welcomed twice. Turn off to welcome everyone who joins.",
         24, "welcomeEnabled")
@@ -354,12 +357,19 @@ local function ShowNextToast()
                 ShowNextToast()
                 return
             end
-            local ok = true
-            for _, line in ipairs(it.lines or { it.text }) do   -- a kit is several whispers from one click
-                local sent = ns.SendNow(line, it.chan, it.target)
-                ok = ok and sent
+            -- Forever blocks an add-on from sending chat, even from a click, and shows a "blocked" box
+            -- when it tries. So nothing here sends directly: each line is typed into the chat box
+            -- and you press Enter, one line at a time (a welcome kit goes line by line).
+            local lines = it.lines or { it.text }
+            local cmd = (it.chan == "WHISPER" and it.target) and ("/w " .. it.target) or "/g"
+            local function nextLine(i)
+                if i > #lines then
+                    if it.onSent then it.onSent() end
+                    return
+                end
+                ns.PrefillChat(lines[i], cmd, function() C_Timer.After(0.3, function() nextLine(i + 1) end) end)
             end
-            if ok and it.onSent then it.onSent() end
+            nextLine(1)
             ShowNextToast()
         end)
         local skip = CreateFrame("Button", nil, toast, "UIPanelButtonTemplate")
@@ -474,6 +484,7 @@ end
 
 -- Invites share one popup entry: refresh it if it's up or waiting, otherwise put it first in line.
 function ns.ShowInviteToast()
+    if ns.AlertInvite then ns.AlertInvite() return end
     if toast and toast:IsShown() and toast.item and toast.item.kind == "invite" then
         local it = toast.item
         toast.item = nil

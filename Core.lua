@@ -13,6 +13,7 @@ ns.DEFAULTS = {
     -- Welcome message
     welcomeEnabled = true,
     welcomeText    = "Everyone welcome {name} to {guild}!",
+    welcomeWhisperText = "Welcome to {guild}, {name}! Glad to have you. Say hi in guild chat and shout if you need anything.",
     welcomeOnlyMine = true,   -- only welcome players Guildie invited (stops double welcomes between officers)
     welcomeDelay   = 3,
     debug          = false,   -- /guildie debug: print why each whisper was or wasn't acted on
@@ -88,6 +89,7 @@ end
 
 local reported = {}
 function ns.ReportError(what, err)     -- say it once, instead of failing silently
+    if ns.Issue then ns.Issue("lua", what, err) end
     if reported[what] then return end
     reported[what] = true
     ns.Print(("|cffff5555Something went wrong in %s:|r %s"):format(what, tostring(err)))
@@ -146,9 +148,22 @@ end
 
 -- Same for chat: once the game has blocked an automatic chat message, remember that for this
 -- client build and go straight to the click popup, instead of trying (and being blocked) again.
-function ns.ChatNeedsClick()
-    if ns.chatNeedsClick then return true end
-    return ns.db ~= nil and ns.db.chatNeedsClick ~= nil and ns.db.chatNeedsClick == ClientBuild()
+-- Learned per channel: Forever blocks add-on guild chat but lets whispers through, so one blocked
+-- channel must not push the others behind a click popup.
+ns.chatNeedsClickBy = {}
+function ns.ChatNeedsClick(chan)
+    chan = chan or "GUILD"
+    if ns.chatNeedsClickBy[chan] then return true end
+    local by = ns.db and ns.db.chatNeedsClickBy
+    return type(by) == "table" and by[chan] ~= nil and by[chan] == ClientBuild()
+end
+function ns.SetChatNeedsClick(chan)
+    chan = chan or "GUILD"
+    ns.chatNeedsClickBy[chan] = true
+    if ns.db then
+        if type(ns.db.chatNeedsClickBy) ~= "table" then ns.db.chatNeedsClickBy = {} end
+        ns.db.chatNeedsClickBy[chan] = ClientBuild()
+    end
 end
 
 function ns.Fill(template, name)
@@ -186,6 +201,7 @@ local echoWatch = {}
 
 function ns.SendNow(text, chan, target)            -- call only from a click handler
     ns.lastChatAt = GetTime()
+    ns.lastChatChan = chan
     ns.lastChatWasClick = true
     return pcall(SendChat, text, chan, nil, target)
 end
@@ -197,7 +213,7 @@ local function WatchEcho(m)
     C_Timer.After(4, function()
         for i, x in ipairs(echoWatch) do if x == w then table.remove(echoWatch, i) break end end
         if not w.done then
-            ns.chatNeedsClick = true
+            ns.SetChatNeedsClick(w.chan)
             ns.Debug("  no echo for " .. w.chan .. " message: the game didn't send it")
             if w.onFail then w.onFail(w.text) end
         end
@@ -232,10 +248,11 @@ local function Flush()
         local m = table.remove(queue, 1)
         if m.onFail then WatchEcho(m) end            -- watch first: the echo can arrive immediately
         ns.lastChatAt = GetTime()
+        ns.lastChatChan = m.chan
         ns.lastChatWasClick = false
         local ok = pcall(SendChat, m.text, m.chan, nil, m.target)
         if not ok then
-            ns.chatNeedsClick = true
+            ns.SetChatNeedsClick(m.chan)
             if m.watch then m.watch.done = true end  -- fail now, not again after the timeout
             if m.onFail then m.onFail(m.text) end
         end
@@ -326,7 +343,7 @@ function ns.SendReply(name)
         ns.Log(name, "|cffffaa00Reply whisper waiting for your click|r")
         if ns.ShowSendToast then ns.ShowSendToast("Whisper " .. ShortName(name) .. "?", text, "WHISPER", name) end
     end
-    if ns.ChatNeedsClick() then needClick() return end
+    if ns.ChatNeedsClick("WHISPER") then needClick() return end
     ns.Say(text, "WHISPER", name, needClick)
 end
 
@@ -357,7 +374,7 @@ local function STReport()
         line(st.auto == 2, ("automatic invites reached the invite step for %d of 2 whispers"):format(st.auto))
     end
     ns.Print(("Still only provable live: whether the game accepts the real invite and chat. Learned so far -> invite needs a click: %s, chat needs a click: %s.")
-        :format(tostring(ns.InviteNeedsClick()), tostring(ns.ChatNeedsClick())))
+        :format(tostring(ns.InviteNeedsClick()), tostring(ns.ChatNeedsClick("GUILD"))))
     -- clean up the fakes
     local keep = {}
     for _, p in ipairs(ns.pendingInvites) do if not ns.IsSelfTest(p.name) then keep[#keep + 1] = p end end
@@ -388,7 +405,7 @@ function ns.SelfTest()
     ns.Print("Self-test: sending two fake whispers (\"Selftest One\", \"Selftest Two\") through Guildie...")
     for _, who in ipairs({ "Selftest One", "Selftest Two" }) do
         lastSeen[Key(who)] = nil
-        ns.InjectWhisper(db.phrase, who)
+        ns.InjectWhisper((tostring(db.phrase):match("[^,;]+") or ""):gsub("^%s+", ""), who)
     end
     for _, p in ipairs(ns.pendingInvites) do if ns.IsSelfTest(p.name) then selfTest.queued = selfTest.queued + 1 end end
     selfTest.matched = (selfTest.queued == 2) or (selfTest.auto == 2)
@@ -418,13 +435,31 @@ function ns.QueueInvite(name)
     ns.Debug("QueueInvite " .. tostring(name) .. " (waiting now: " .. #ns.pendingInvites .. ")")
     for _, p in ipairs(ns.pendingInvites) do if p.key == k then return end end
     ns.pendingInvites[#ns.pendingInvites + 1] = { name = name, key = k, at = GetTime() }
-    ns.Log(name, "|cffffaa00Waiting for your click to invite|r")
-    if ns.ShowInviteToast then ns.ShowInviteToast() end
+    ns.Log(name, "|cffffaa00Waiting for you to send the invite|r")
+    ns.AlertInvite()
     -- refresh the popup when this request would expire, so a stale name never lingers
     C_Timer.After(INVITE_WAIT + 1, function()
         ns.PendingInvites()
         if ns.RefreshInviteToast then ns.RefreshInviteToast() end
     end)
+end
+
+-- A request arrived: a sound and a flash, then the chat bar is filled with "/ginvite Name".
+-- You press Enter. Guildie does nothing else, so the game sees an ordinary typed command.
+function ns.AlertInvite()
+    local list = ns.PendingInvites()
+    if #list == 0 then return end
+    pcall(function() PlaySound((SOUNDKIT and SOUNDKIT.TELL_MESSAGE) or 3081) end)
+    if FlashClientIcon then pcall(FlashClientIcon) end
+    if InCombatLockdown and InCombatLockdown() then
+        ns.Print(("%s wants a guild invite (in combat: waiting)."):format(ShortName(list[1].name)))
+        return
+    end
+    if _G.ACTIVE_CHAT_EDIT_BOX then
+        ns.Print(("%s wants a guild invite: /ginvite %s"):format(ShortName(list[1].name), list[1].name))
+        return
+    end
+    ns.PrefillInvite()
 end
 
 function ns.PendingInvites()
@@ -463,8 +498,12 @@ function ns.PrefillInvite()
     ns.awaiting = aw
     local text = "/ginvite " .. p.name
     ns.Debug("popup click: putting \"" .. text .. "\" in the chat box; waiting for Enter")
-    if ChatFrame_OpenChat then ChatFrame_OpenChat(text, DEFAULT_CHAT_FRAME) end
-    ns.Print(("Press |cff33ff99Enter|r to invite %s."):format(ShortName(p.name)))
+    local okOpen = ns.db and ns.db.prefillChatBox and ChatFrame_OpenChat and pcall(ChatFrame_OpenChat, text, DEFAULT_CHAT_FRAME)
+    if okOpen then
+        ns.Print(("Press |cff33ff99Enter|r to invite %s."):format(ShortName(p.name)))
+    else
+        ns.Print(("%s wants a guild invite. Type: |cff33ff99%s|r"):format(ShortName(p.name), text))
+    end
     C_Timer.After(45, function()
         if ns.awaiting == aw then
             ns.awaiting = nil
@@ -475,8 +514,34 @@ function ns.PrefillInvite()
     return 1
 end
 
+-- Guild chat from an add-on is blocked on Forever even from a click, but a line you send with Enter
+-- is allowed. So the popup's click puts the line in the chat box and you press Enter to post it.
+ns.awaitingChat = nil
+function ns.PrefillChat(text, cmd, onSent)
+    local aw = { text = text, cmd = cmd, onSent = onSent, at = GetTime() }
+    ns.awaitingChat = aw
+    ns.Debug("popup click: putting " .. cmd .. " line in the chat box; waiting for Enter")
+    local okOpen = ns.db and ns.db.prefillChatBox and ChatFrame_OpenChat and pcall(ChatFrame_OpenChat, cmd .. " " .. text, DEFAULT_CHAT_FRAME)
+    if okOpen then
+        ns.Print("Press |cff33ff99Enter|r to post it.")
+    else
+        ns.Print(("Type this, then press Enter: |cff33ff99%s %s|r"):format(cmd, text))
+    end
+    C_Timer.After(60, function() if ns.awaitingChat == aw then ns.awaitingChat = nil end end)
+end
+
 -- Called with the text of a chat line the moment Enter is pressed.
 function ns.OnChatLine(text)
+    local ac = ns.awaitingChat
+    if ac and type(text) == "string" then
+        local t = Trim(text)
+        if t == Trim(ac.text) or t:sub(1, #ac.cmd + 1) == ac.cmd .. " " then
+            ns.awaitingChat = nil
+            ns.Debug("Enter pressed: welcome line posted by you")
+            if ac.onSent then pcall(ac.onSent) end
+            return
+        end
+    end
     local aw = ns.awaiting
     if not aw or type(text) ~= "string" then return end
     local who = text:match("^/ginvite%s+(.-)%s*$") or text:match("^/guildinvite%s+(.-)%s*$")
@@ -491,6 +556,8 @@ function ns.OnChatLine(text)
 end
 
 function ns.HookChatBoxes()
+    -- off by default: Guildie stays out of the chat box so the game treats /ginvite as a command you typed
+    if not (ns.db and ns.db.hookChat) then return end
     if ns.chatHooked then return end
     ns.chatHooked = true
     for i = 1, (NUM_CHAT_WINDOWS or 10) do
@@ -578,6 +645,10 @@ end
 OnWhisper = function(msg, sender, lineID)
     if not db.enabled then ns.Debug("  -> ignored: auto-invite is turned off (/guildie on)") return end
     if IsSecret(msg) or IsSecret(sender) then
+        if not ns.warnedSecret then
+            ns.warnedSecret = true
+            ns.Print("A whisper arrived but the game hides its text from add-ons right now (combat, an encounter or chat lockdown). Guildie will read it again as soon as that ends.")
+        end
         if lineID and not IsSecret(lineID) then
             lockedLines[#lockedLines + 1] = { lineID = lineID, t = GetTime() }
             ns.Debug("whisper arrived during chat lockdown; will read it when lockdown ends")
@@ -588,18 +659,35 @@ OnWhisper = function(msg, sender, lineID)
         return
     end
 
-    local phrase = Normalize(db.phrase)
     local text = Normalize(msg)
     ns.Debug(("whisper from %s: raw=%q normalized=%q phrase=%q anywhere=%s"):format(
-        tostring(sender), tostring(msg), text, phrase, tostring(db.matchAnywhere)))
-    if phrase == "" then return end
-
-    local hit
-    if db.matchAnywhere then
-        hit = text:find(phrase, 1, true) ~= nil
-    else
-        hit = (text == phrase)
+        tostring(sender), tostring(msg), text, tostring(db.phrase), tostring(db.matchAnywhere)))
+    -- The phrase box may hold several phrases separated by commas. Spaces, dashes and punctuation
+    -- are ignored, and "guild"/"g" and "inv"/"invite" count as the same word, so "g invite",
+    -- "ginvite", "g-inv", "guild inv" and "Guild Invite!" all match one another.
+    local function Canon(x)
+        x = Normalize(x):gsub("[^%w]", "")
+        x = x:gsub("^guild", "g"):gsub("invite$", "inv"):gsub("invite", "inv")
+        return x
     end
+    local ctext, any = Canon(text), false
+    local hit
+    for part in tostring(db.phrase or ""):gmatch("[^,;]+") do
+        local cp = Canon(part)
+        if cp ~= "" then
+            any = true
+            if db.matchAnywhere then
+                -- search the whisper's words, not the squashed text, so "login" can't hit "g inv"
+                local padded = " " .. text:gsub("[^%w]+", " ") .. " "
+                local np = Normalize(part):gsub("[^%w]+", " ")
+                hit = padded:find(" " .. np .. " ", 1, true) ~= nil or ctext:find(cp, 1, true) ~= nil and #cp >= 4
+            else
+                hit = (ctext == cp)
+            end
+            if hit then break end
+        end
+    end
+    if not any then return end
     if not hit then
         ns.Debug("  -> no match")
         return
@@ -659,6 +747,18 @@ local function CheckInviteResult(msg)
         if who then
             who = (who:gsub("|H.-|h%[?(.-)%]?|h", "%1"))
             local k = Key(who)
+            -- the invite you sent yourself: take it out of the waiting list and do the usual bookkeeping
+            if not ns.invitedByMe[k] then
+                for i, p in ipairs(ns.pendingInvites) do
+                    if p.key == k then
+                        table.remove(ns.pendingInvites, i)
+                        if ns.awaiting and ns.awaiting.key == k then ns.awaiting = nil end
+                        pcall(ns.DoInvite, p.name, true, true)
+                        if #ns.pendingInvites > 0 then C_Timer.After(1, ns.AlertInvite) end
+                        break
+                    end
+                end
+            end
             if ns.invitedByMe[k] then
                 ns.inviteAnswered[k] = GetTime()
                 if r.clear then ns.inviteFailed[k] = GetTime() end
@@ -710,7 +810,25 @@ local function Welcome(who, source)
 
     C_Timer.After(tonumber(db.welcomeDelay) or 3, function()
         local text = ns.Fill(db.welcomeText, who)
+        local popup
         local function needClick()
+            if db.welcomeWhisper ~= false and not ns.ChatNeedsClick("WHISPER") and not ns.welcomeWhispered then
+                -- guild chat is blocked for add-ons, whispers are not: welcome them privately
+                ns.welcomeWhispered = who
+                local wtext = ns.Fill(db.welcomeWhisperText or "Welcome to {guild}, {name}!", who)
+                ns.Say(wtext, "WHISPER", who, function() ns.welcomeWhispered = nil popup() end)
+                C_Timer.After(4.5, function()
+                    if ns.welcomeWhispered == who then
+                        ns.welcomeWhispered = nil
+                        db.stats.welcomed = db.stats.welcomed + 1
+                        ns.Log(who, "|cff66ccffJoined + welcomed (whisper)|r")
+                    end
+                end)
+                return
+            end
+            popup()
+        end
+        popup = function()
             ns.Log(who, "|cffffaa00Welcome waiting for your click|r")
             if not ns.toldNeedsClick then
                 ns.toldNeedsClick = true
@@ -723,10 +841,10 @@ local function Welcome(who, source)
                 end)
             end
         end
-        if ns.ChatNeedsClick() then needClick() return end   -- already learned: go straight to the popup
+        if ns.ChatNeedsClick("GUILD") then needClick() return end   -- already learned: go straight to the popup
         ns.Say(text, "GUILD", nil, needClick)
         C_Timer.After(4.5, function()
-            if not ns.ChatNeedsClick() then
+            if not ns.ChatNeedsClick("GUILD") then
                 db.stats.welcomed = db.stats.welcomed + 1
                 ns.Log(who, "|cff66ccffJoined + welcomed|r")
             end
@@ -742,8 +860,8 @@ function ns.TestWelcome()
     ns.Print("Welcome test: one test line will post in guild chat in 2 seconds.")
     C_Timer.After(2, function()
         local text = "[Guildie test] Checking that welcome messages can post. Ignore me!"
-        ns.chatNeedsClick = false
-        if ns.db then ns.db.chatNeedsClick = nil end
+        ns.chatNeedsClickBy.GUILD = nil
+        if ns.db and type(ns.db.chatNeedsClickBy) == "table" then ns.db.chatNeedsClickBy.GUILD = nil end
         local failed = false
         ns.Say(text, "GUILD", nil, function()
             failed = true
@@ -937,6 +1055,12 @@ f:SetScript("OnEvent", function(_, event, ...)
         local addon, func = ...
         if addon ~= ADDON_NAME then return end
         func = tostring(func or "")
+        -- always say which function the game blocked (once every few seconds), so a problem like this
+        -- can be pinned down without turning debug on first
+        if not ns.lastBlockedPrint or GetTime() - ns.lastBlockedPrint > 5 then
+            ns.lastBlockedPrint = GetTime()
+            ns.Print(("|cffff8844The game blocked:|r %s (%s). Copy this line if it keeps happening."):format(func, tostring(event)))
+        end
         ns.Debug(("blocked action reported: %s (%s), %.1fs after our last invite, %.1fs after our last chat")
             :format(func, tostring(event), GetTime() - (ns.lastInviteAt or -100), GetTime() - (ns.lastChatAt or -100)))
         -- The game often reports the blocked function as UNKNOWN(). Go by its name when we get
@@ -961,8 +1085,7 @@ f:SetScript("OnEvent", function(_, event, ...)
             if ns.lastChatWasClick and sinceChat < 1.5 then
                 ns.Print("The game blocked that message even though it came from your click. Forever may not let addons post this kind of chat at all.")
             else
-                ns.chatNeedsClick = true
-                db.chatNeedsClick = ClientBuild()
+                ns.SetChatNeedsClick(ns.lastChatChan)
                 ns.Debug("the game blocked an automatic chat message; from now on welcomes wait for your click")
                 FailWatches()
             end

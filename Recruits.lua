@@ -201,14 +201,14 @@ function Kit.Send(who, lines)
                 function() ns.Log(who, "|cff66ccffWelcome kit sent|r") end, lines)
         end
     end
-    if ns.ChatNeedsClick() then needClick() return end
+    if ns.ChatNeedsClick("WHISPER") then needClick() return end
     -- try it automatically; the first line is watched, and if the game refuses it the whole kit
     -- waits for one click instead
     for i, line in ipairs(lines) do
         ns.Say(line, "WHISPER", target, i == 1 and needClick or nil)
     end
     C_Timer.After(4.5, function()
-        if not ns.ChatNeedsClick() then ns.Log(who, "|cff66ccffWelcome kit sent|r") end
+        if not ns.ChatNeedsClick("WHISPER") then ns.Log(who, "|cff66ccffWelcome kit sent|r") end
     end)
 end
 

@@ -46,10 +46,10 @@ function Ann.Shout(what, name, text, onDone)
         elseif onDone then onDone()
         end
     end
-    if ns.ChatNeedsClick() then needClick() return end
+    if ns.ChatNeedsClick("GUILD") then needClick() return end
     ns.Say(text, "GUILD", nil, needClick)
     C_Timer.After(4.5, function()
-        if not ns.ChatNeedsClick() then
+        if not ns.ChatNeedsClick("GUILD") then
             ns.Log(name, "|cff66ccff" .. what .. " shout-out sent|r")
             if onDone then onDone() end
         end

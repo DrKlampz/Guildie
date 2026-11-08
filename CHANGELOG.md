@@ -1,5 +1,10 @@
 # Guildie
 
+## v1.12.0
+- Invites: Guildie can no longer send guild invites itself on Forever; it alerts you with the name and the /ginvite command instead.
+- Welcome: new members get a whisper with their own welcome text.
+- New: /issues log.
+
 ## v1.11.0
 - Armory: the "Also plays" buttons now show each character's professions in shorthand (LW, ECH, ALC...; main professions only). Guildie records your professions on every character you log in on and shares them with the guild, so log in once on each character to fill them in.
 

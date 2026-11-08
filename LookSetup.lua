@@ -19,6 +19,7 @@ local function Options()
         { id = "welcome", title = "Welcome message", rows = {
             L.Kon("Welcome new guild members in guild chat", db, "welcomeEnabled"),
             L.Text("Welcome text", db, "welcomeText", "{name} and {guild} are filled in"),
+            L.Text("Whisper instead (guild chat is blocked)", db, "welcomeWhisperText", "Sent privately to the new member"),
             L.Kon("Only welcome players Guildie invited", db, "welcomeOnlyMine"),
             L.Slider("Seconds to wait before welcoming", db, "welcomeDelay", 0, 15, 1),
         } },
