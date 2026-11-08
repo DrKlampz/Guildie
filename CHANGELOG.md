@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.12.1
+- Release packaging: the automatic release now publishes to Wago and GitHub (the CurseForge upload was rejecting it). Same add-on as v1.12.0.
+
 ## v1.12.0
 - Invites: Guildie can no longer send guild invites itself on Forever; it alerts you with the name and the /ginvite command instead.
 - Welcome: new members get a whisper with their own welcome text.
