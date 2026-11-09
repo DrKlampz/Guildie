@@ -160,11 +160,31 @@ local function BuildEntries()
             end
         end
     end
+    local adopt = {}
     for k, rec in pairs(data) do   -- people who left the guild but still have data
         if not seen[k] then
+            -- an old record saved under a first name only ("mooman") belongs to the one member whose
+            -- name starts with it ("mooman raintotem"): fold it in instead of listing them twice
+            local owner
+            for _, e in ipairs(entries) do
+                if not e.gone and e.key:sub(1, #k + 1) == k .. " " then
+                    if owner then owner = false break end
+                    owner = e
+                end
+            end
+            if owner then
+                if not owner.rec then
+                    owner.rec = rec
+                    owner.class = owner.class or rec.class
+                    adopt[#adopt + 1] = { owner.key, rec }
+                end
+                data[k] = nil   -- clearing a field while looping is allowed
+            else
             entries[#entries + 1] = { key = k, name = rec.name or k, class = rec.class, level = rec.level, rec = rec, gone = true }
+            end
         end
     end
+    for _, a in ipairs(adopt) do data[a[1]] = data[a[1]] or a[2] end
     local q = frame and frame.search:GetText():lower() or ""
     if q ~= "" then
         for i = #entries, 1, -1 do
