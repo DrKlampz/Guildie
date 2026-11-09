@@ -1,0 +1,18 @@
+Look Fonts bundles open-licensed fonts. Each keeps its own license:
+
+SIL Open Font License 1.1: Almendra, Anton, Bebas Neue, Caudex, Cinzel Decorative, Fira Sans, Fira Sans Condensed,
+  Germania One, Lato, Marcellus, MedievalSharp, Metamorphous, PT Sans, PT Sans Narrow, PT Serif, PT Mono, Philosopher,
+  Pirata One, Poppins, Press Start 2P, Rajdhani, Uncial Antiqua, Unica One, UnifrakturCook, VT323.
+Ubuntu Font Licence 1.0: Ubuntu, Ubuntu Mono.
+SIL OFL 1.1 (Liberation 2.x): Liberation Sans, Liberation Serif, Liberation Mono.
+SIL OFL 1.1 (Carlito, Caladea).
+Bitstream Vera / DejaVu license (free to use and redistribute): DejaVu Sans, Sans Bold, Sans Condensed, Serif, Sans Mono.
+
+SIL Open Font License 1.1 (added later, from Google Fonts): Abril Fatface, Alegreya Sans, Audiowide, Bangers, Barlow, Barlow Condensed,
+  Black Ops One, Bungee, Cabin, Caveat, Chakra Petch, Cinzel, Cormorant Garamond, Creepster, Crimson Text, Cutive Mono, DM Sans,
+  EB Garamond, Eagle Lake, Eater, Exo 2, Fira Code, Fondamento, IBM Plex Mono, IBM Plex Sans, IM Fell English, JetBrains Mono,
+  Josefin Sans, Lobster, Lora, Macondo, Metal Mania, Michroma, Montserrat, Mystery Quest, New Rocker, Nunito, Open Sans, Orbitron,
+  Oswald, Oxanium, Pacifico, Playfair Display, Quicksand, Righteous, Roboto Condensed, Roboto Mono, Rubik, Russo One,
+  Source Code Pro, Source Sans 3, Space Mono, Spectral, Staatliches, Teko, Titillium Web, Vollkorn, Work Sans.
+
+The font files are unmodified and are not sold on their own.

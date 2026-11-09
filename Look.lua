@@ -108,8 +108,8 @@ local function BgStyles()
     for _, g in ipairs(GREED_TEX) do out[g[1]] = { "Interface\\AddOns\\GreedUI\\Media\\" .. g[3], true, g[4] } end
     return out
 end
--- fonts: the game's own, a bundled pack (the LookFonts add-on, if it is installed), and any SharedMedia fonts
-local PACK = "Interface\\AddOns\\LookFonts\\Fonts\\"
+-- fonts: the game's own, the pack bundled in this add-on's Fonts folder, and any SharedMedia fonts
+local PACK = "Interface\\AddOns\\" .. tostring(ADDON_NAME) .. "\\Fonts\\"   -- fonts ship inside each add-on
 local FONT_DEFS = {
     { "frizqt", "Friz Quadrata (game standard)", "Fonts\\FRIZQT__.TTF" },
     { "arial", "Arial Narrow", "Fonts\\ARIALN.TTF" },
@@ -163,6 +163,69 @@ local FONT_DEFS = {
     { "p_libmono", "Liberation Mono", PACK .. "LiberationMono-Regular.ttf" },
     { "p_vt323", "VT323 (terminal)", PACK .. "VT323.ttf" },
     { "p_pressstart", "Press Start 2P (pixel)", PACK .. "PressStart2P.ttf" },
+    { "p_abrilfatfaceregular", "Abril Fatface", PACK .. "AbrilFatface-Regular.ttf" },
+    { "p_alegreyasansbold", "Alegreya Sans Bold", PACK .. "AlegreyaSans-Bold.ttf" },
+    { "p_alegreyasansregular", "Alegreya Sans", PACK .. "AlegreyaSans-Regular.ttf" },
+    { "p_audiowideregular", "Audiowide", PACK .. "Audiowide-Regular.ttf" },
+    { "p_bangersregular", "Bangers", PACK .. "Bangers-Regular.ttf" },
+    { "p_barlowbold", "Barlow Bold", PACK .. "Barlow-Bold.ttf" },
+    { "p_barlowregular", "Barlow", PACK .. "Barlow-Regular.ttf" },
+    { "p_barlowcondensedregular", "Barlow Condensed", PACK .. "BarlowCondensed-Regular.ttf" },
+    { "p_blackopsoneregular", "Black Ops One", PACK .. "BlackOpsOne-Regular.ttf" },
+    { "p_bungeeregular", "Bungee", PACK .. "Bungee-Regular.ttf" },
+    { "p_cabin", "Cabin", PACK .. "Cabin.ttf" },
+    { "p_caveat", "Caveat", PACK .. "Caveat.ttf" },
+    { "p_chakrapetchregular", "Chakra Petch", PACK .. "ChakraPetch-Regular.ttf" },
+    { "p_cinzel", "Cinzel", PACK .. "Cinzel.ttf" },
+    { "p_cormorantgaramond", "Cormorant Garamond", PACK .. "CormorantGaramond.ttf" },
+    { "p_creepsterregular", "Creepster", PACK .. "Creepster-Regular.ttf" },
+    { "p_crimsontextbold", "Crimson Text Bold", PACK .. "CrimsonText-Bold.ttf" },
+    { "p_crimsontextregular", "Crimson Text", PACK .. "CrimsonText-Regular.ttf" },
+    { "p_cutivemonoregular", "Cutive Mono", PACK .. "CutiveMono-Regular.ttf" },
+    { "p_dmsans", "DMSans", PACK .. "DMSans.ttf" },
+    { "p_ebgaramond", "EBGaramond", PACK .. "EBGaramond.ttf" },
+    { "p_eaglelakeregular", "Eagle Lake", PACK .. "EagleLake-Regular.ttf" },
+    { "p_eaterregular", "Eater", PACK .. "Eater-Regular.ttf" },
+    { "p_exo2", "Exo 2", PACK .. "Exo2.ttf" },
+    { "p_firacode", "Fira Code", PACK .. "FiraCode.ttf" },
+    { "p_fondamentoregular", "Fondamento", PACK .. "Fondamento-Regular.ttf" },
+    { "p_ibmplexmonoregular", "IBMPlex Mono", PACK .. "IBMPlexMono-Regular.ttf" },
+    { "p_ibmplexsans", "IBMPlex Sans", PACK .. "IBMPlexSans.ttf" },
+    { "p_imfeenrm28p", "IMFe ENrm28 P", PACK .. "IMFeENrm28P.ttf" },
+    { "p_jetbrainsmono", "Jet Brains Mono", PACK .. "JetBrainsMono.ttf" },
+    { "p_josefinsans", "Josefin Sans", PACK .. "JosefinSans.ttf" },
+    { "p_lobsterregular", "Lobster", PACK .. "Lobster-Regular.ttf" },
+    { "p_lora", "Lora", PACK .. "Lora.ttf" },
+    { "p_macondoregular", "Macondo", PACK .. "Macondo-Regular.ttf" },
+    { "p_metalmaniaregular", "Metal Mania", PACK .. "MetalMania-Regular.ttf" },
+    { "p_michromaregular", "Michroma", PACK .. "Michroma-Regular.ttf" },
+    { "p_montserrat", "Montserrat", PACK .. "Montserrat.ttf" },
+    { "p_mysteryquestregular", "Mystery Quest", PACK .. "MysteryQuest-Regular.ttf" },
+    { "p_newrockerregular", "New Rocker", PACK .. "NewRocker-Regular.ttf" },
+    { "p_nunito", "Nunito", PACK .. "Nunito.ttf" },
+    { "p_opensans", "Open Sans", PACK .. "OpenSans.ttf" },
+    { "p_orbitron", "Orbitron", PACK .. "Orbitron.ttf" },
+    { "p_oswald", "Oswald", PACK .. "Oswald.ttf" },
+    { "p_oxanium", "Oxanium", PACK .. "Oxanium.ttf" },
+    { "p_pacificoregular", "Pacifico", PACK .. "Pacifico-Regular.ttf" },
+    { "p_playfairdisplay", "Playfair Display", PACK .. "PlayfairDisplay.ttf" },
+    { "p_quicksand", "Quicksand", PACK .. "Quicksand.ttf" },
+    { "p_righteousregular", "Righteous", PACK .. "Righteous-Regular.ttf" },
+    { "p_robotocondensed", "Roboto Condensed", PACK .. "RobotoCondensed.ttf" },
+    { "p_robotomono", "Roboto Mono", PACK .. "RobotoMono.ttf" },
+    { "p_rubik", "Rubik", PACK .. "Rubik.ttf" },
+    { "p_russooneregular", "Russo One", PACK .. "RussoOne-Regular.ttf" },
+    { "p_sourcecodepro", "Source Code Pro", PACK .. "SourceCodePro.ttf" },
+    { "p_sourcesans3", "Source Sans 3", PACK .. "SourceSans3.ttf" },
+    { "p_spacemonoregular", "Space Mono", PACK .. "SpaceMono-Regular.ttf" },
+    { "p_spectralbold", "Spectral Bold", PACK .. "Spectral-Bold.ttf" },
+    { "p_spectralregular", "Spectral", PACK .. "Spectral-Regular.ttf" },
+    { "p_staatlichesregular", "Staatliches", PACK .. "Staatliches-Regular.ttf" },
+    { "p_teko", "Teko", PACK .. "Teko.ttf" },
+    { "p_titilliumwebbold", "Titillium Web Bold", PACK .. "TitilliumWeb-Bold.ttf" },
+    { "p_titilliumwebregular", "Titillium Web", PACK .. "TitilliumWeb-Regular.ttf" },
+    { "p_vollkorn", "Vollkorn", PACK .. "Vollkorn.ttf" },
+    { "p_worksans", "Work Sans", PACK .. "WorkSans.ttf" },
 }
 local FONTS, FONT_PATH, FONT_ORDER = { default = "Original (unchanged)" }, {}, { "default" }
 local testFS
@@ -179,7 +242,10 @@ local function BuildFonts()
     for k in pairs(FONT_PATH) do FONT_PATH[k] = nil end
     for _, d in ipairs(FONT_DEFS) do
         local ok = fontsBuilt[d[3]]
-        if ok == nil then ok = FontLoads(d[3]) fontsBuilt[d[3]] = ok end
+        if ok == nil then
+            if d[3]:sub(1, #PACK) == PACK then ok = true else ok = FontLoads(d[3]) end
+            fontsBuilt[d[3]] = ok
+        end
         if ok then
             FONT_ORDER[#FONT_ORDER + 1] = d[1]
             FONTS[d[1]] = d[2]
@@ -437,7 +503,8 @@ local function ApplyFonts(frame, s, on, spec)
             local path = FONT_PATH[s.font] or o[1]
             local flags = o[3]
             if s.outline and not tostring(flags):find("OUTLINE") then flags = (flags ~= "" and (flags .. ",") or "") .. "OUTLINE" end
-            fs:SetFont(path, math.max(6, math.floor(o[2] * (tonumber(s.fontScale) or 1) + 0.5)), flags)
+            local size = math.max(6, math.floor(o[2] * (tonumber(s.fontScale) or 1) + 0.5))
+            if fs:SetFont(path, size, flags) == false then fs:SetFont(o[1], size, o[3]) end   -- a font the game can't load: keep the original
         else
             fs:SetFont(o[1], o[2], o[3])
         end
