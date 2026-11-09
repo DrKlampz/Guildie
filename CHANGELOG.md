@@ -1,10 +1,8 @@
 # Guildie
 
-## Unreleased
+## v1.12.1
 - Fonts: the font pack now ships inside this add-on (Fonts folder), so the separate Look Fonts add-on is no longer needed, and there are about 60 more fonts to pick from under Look > Font.
 - Armory: a character saved under a first name only ("Mooman") is no longer listed a second time next to their full name ("Mooman Raintotem"); the old record is folded into the real one.
-
-## v1.12.1
 - Release packaging: the automatic release now publishes to Wago and GitHub (the CurseForge upload was rejecting it). Same add-on as v1.12.0.
 
 ## v1.12.0
