@@ -59,6 +59,7 @@ local function Create()
     btn:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
     btn:SetScript("OnClick", function(_, mouseButton)
         GameTooltip:Hide()
+        if IsShiftKeyDown() and ns.MapPins then ns.MapPins.ToggleOptions() return end
         if IsAltKeyDown() and ns.WinLook then ns.WinLook.Toggle() return end
         if mouseButton == "RightButton" then
             ns.ToggleUI()
@@ -71,6 +72,7 @@ local function Create()
         GameTooltip:AddLine("|cff33ff99Guildie|r")
         GameTooltip:AddLine("Left-click: Guild Armory", 0.9, 0.9, 0.9)
         GameTooltip:AddLine("Right-click: Settings", 0.9, 0.9, 0.9)
+        GameTooltip:AddLine("Shift-click: map pin options", 0.9, 0.9, 0.9)
         GameTooltip:AddLine("Alt-click: window looks", 0.9, 0.9, 0.9)
         GameTooltip:AddLine("Drag: move this button", 0.6, 0.6, 0.6)
         GameTooltip:Show()

@@ -1169,6 +1169,8 @@ SlashCmdList.GUILDIE = function(input)
             local off, label = rest:match("^(%S+)%s*(.*)$")
             if ns.Timezones then ns.Timezones.Set(off, label) end
         end
+    elseif cmd == "map" then
+        if ns.MapPins then ns.MapPins.Command(rest) end
     elseif cmd == "zone" or cmd == "where" then
         if ns.Zone then ns.Zone.Command(rest) end
     elseif cmd == "schedule" then

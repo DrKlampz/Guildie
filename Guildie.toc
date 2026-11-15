@@ -27,6 +27,7 @@ Dates.lua
 Anniversaries.lua
 Timezones.lua
 Zone.lua
+MapPins.lua
 UI.lua
 ArmoryUI.lua
 Minimap.lua

@@ -1,5 +1,9 @@
 # Guildie
 
+## v1.13.0
+- Map: guildmates now show up as pins on the world map. Anyone running Guildie shares their exact spot (green pin); everyone else online is pinned at the middle of the zone the guild roster says they are in (gold pin). Hover a pin for the name and place.
+- Options for the map pins (show, share my spot, zone-center pins, names, size, colors) open with Shift-click on the minimap button or /guildie map. /guildie map share off stops sharing your spot.
+
 ## v1.12.2
 - Fonts: the font pack now ships inside this add-on (Fonts folder), so the separate Look Fonts add-on is no longer needed, and there are about 60 more fonts to pick from under Look > Font.
 - Armory: a character saved under a first name only ("Mooman") is no longer listed a second time next to their full name ("Mooman Raintotem"); the old record is folded into the real one.
