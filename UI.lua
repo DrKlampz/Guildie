@@ -498,6 +498,15 @@ function ns.ShowInviteToast()
     ShowNextToast()
 end
 
+-- The waiting list is empty (everyone was invited or joined): take a leftover invite popup down.
+function ns.ClearInviteToast()
+    if toast and toast:IsShown() and toast.item and toast.item.kind == "invite" then
+        toast.item = nil
+        toast:Hide()
+    end
+    for i = #toastQueue, 1, -1 do if toastQueue[i].kind == "invite" then table.remove(toastQueue, i) end end
+end
+
 function ns.RefreshInviteToast()
     if toast and toast:IsShown() and toast.item and toast.item.kind == "invite" then ns.ShowInviteToast() end
 end

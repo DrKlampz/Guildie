@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.13.1
+- Invites: the popup no longer keeps telling you to /ginvite someone you already invited. A request now comes off the list when the person is in your guild, and a leftover invite popup is taken down when nothing is waiting any more.
+
 ## v1.13.0
 - Map: guildmates now show up as pins on the world map. Anyone running Guildie shares their exact spot (green pin); everyone else online is pinned at the middle of the zone the guild roster says they are in (gold pin). Hover a pin for the name and place.
 - Options for the map pins (show, share my spot, zone-center pins, names, size, colors) open with Shift-click on the minimap button or /guildie map. /guildie map share off stops sharing your spot.

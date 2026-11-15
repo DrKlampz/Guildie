@@ -475,6 +475,29 @@ function ns.PendingInvites()
     return keep
 end
 
+-- Anyone waiting for an invite who is already in the guild (or was invited some other way)
+-- comes off the list, so the popup never asks you to invite someone you already did.
+function ns.PruneInvites()
+    if #ns.pendingInvites == 0 or not IsInGuild() then return end
+    local inGuild = {}
+    for i = 1, (GetNumGuildMembers() or 0) do
+        local n = GetGuildRosterInfo(i)
+        if n and not IsSecret(n) then inGuild[Key(n)] = true end
+    end
+    local keep, dropped = {}, false
+    for _, p in ipairs(ns.pendingInvites) do
+        if inGuild[p.key] then
+            dropped = true
+            ns.Debug("dropping invite request for " .. p.name .. ": already in the guild")
+            if ns.awaiting and ns.awaiting.key == p.key then ns.awaiting = nil end
+        else
+            keep[#keep + 1] = p
+        end
+    end
+    ns.pendingInvites = keep
+    if dropped and #keep == 0 and ns.ClearInviteToast then ns.ClearInviteToast() end
+end
+
 function ns.OnePerClick()
     return db.inviteOnePerClick ~= nil and db.inviteOnePerClick == ClientBuild()
 end
@@ -508,6 +531,7 @@ function ns.PrefillInvite()
         if ns.awaiting == aw then
             ns.awaiting = nil
             ns.Debug("no Enter pressed for " .. p.name .. " within 45s")
+            pcall(ns.PruneInvites)
             if #ns.PendingInvites() > 0 and ns.ShowInviteToast then ns.ShowInviteToast() end
         end
     end)
@@ -754,7 +778,8 @@ local function CheckInviteResult(msg)
                         table.remove(ns.pendingInvites, i)
                         if ns.awaiting and ns.awaiting.key == k then ns.awaiting = nil end
                         pcall(ns.DoInvite, p.name, true, true)
-                        if #ns.pendingInvites > 0 then C_Timer.After(1, ns.AlertInvite) end
+                        if #ns.pendingInvites > 0 then C_Timer.After(1, ns.AlertInvite)
+                        elseif ns.ClearInviteToast then ns.ClearInviteToast() end
                         break
                     end
                 end
@@ -1100,6 +1125,7 @@ f:SetScript("OnEvent", function(_, event, ...)
             ns.Debug("ui error: " .. text)
         end
     elseif event == "GUILD_ROSTER_UPDATE" then
+        pcall(ns.PruneInvites)
         OnRoster()
         ns.RefreshUI()
     else
