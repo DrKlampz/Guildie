@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.14.4
+- Find recruits: also closes the Looking For Group window if the game opens it when a search comes back.
+
 ## v1.14.3
 - Find recruits: searching no longer pops up the Who window or fills your chat with the results.
 

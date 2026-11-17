@@ -79,6 +79,29 @@ local function Collect()
     end
 end
 
+-- windows the game may open by itself when a /who comes back (Friends/Who, Looking For Group, ...)
+FR.POPUPS = { "FriendsFrame", "WhoFrame", "LFGParentFrame", "LFDParentFrame", "LFGListFrame", "LookingForGroupFrame",
+    "PVEFrame", "GroupFinderFrame", "SocialFrame", "CommunitiesFrame" }
+function FR.CloseNew()
+    for _, n in ipairs(FR.POPUPS) do
+        local f = _G[n]
+        if f and f.IsShown and f:IsShown() and FR.before and FR.before[n] == false then
+            if _G.HideUIPanel then pcall(HideUIPanel, f) else pcall(f.Hide, f) end
+        end
+    end
+end
+-- the game can open the window a moment after the result, so keep watching briefly
+do
+    local w = CreateFrame("Frame")
+    local acc = 0
+    w:SetScript("OnUpdate", function(_, dt)
+        acc = acc + dt
+        if acc < 0.2 then return end
+        acc = 0
+        if FR.watchUntil and GetTime() < FR.watchUntil then FR.CloseNew() end
+    end)
+end
+
 function FR.Scan()
     if not (C_FriendList and C_FriendList.SendWho) then
         if status then status:SetText("This client can't search players.") end
@@ -97,6 +120,9 @@ function FR.Scan()
     -- result lines while we wait, and close the friends/Who window if the game opened it anyway
     if C_FriendList.SetWhoToUi then pcall(C_FriendList.SetWhoToUi, false) end
     FR.wasOpen = _G.FriendsFrame and FriendsFrame:IsShown() or false
+    FR.before = {}
+    for _, n in ipairs(FR.POPUPS) do local f = _G[n]; FR.before[n] = f and f.IsShown and f:IsShown() or false end
+    FR.watchUntil = GetTime() + 4
     FR.quietUntil = GetTime() + 8
     local ok = pcall(C_FriendList.SendWho, q)
     if status then status:SetText(ok and ("Searching: " .. q .. " ...") or "Search failed. Try again in a few seconds.") end
@@ -242,9 +268,7 @@ f:SetScript("OnEvent", function(_, event, text, sender)
             if C_FriendList and C_FriendList.SetWhoToUi then pcall(C_FriendList.SetWhoToUi, false) end
             Collect()
             FR.quietUntil = GetTime() + 1
-            if _G.FriendsFrame and FriendsFrame:IsShown() and not FR.wasOpen then
-                if _G.HideUIPanel then pcall(HideUIPanel, FriendsFrame) else FriendsFrame:Hide() end
-            end
+            FR.CloseNew()
         end
     elseif event == "CHAT_MSG_WHISPER" then
         if not (ns.db and sender and text) or (ns.IsSecret and (ns.IsSecret(text) or ns.IsSecret(sender))) then return end
