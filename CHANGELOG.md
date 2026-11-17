@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.14.2
+- Find recruits: an "Any level" box, for when you don't care what level they are.
+
 ## v1.14.1
 - Find recruits is now a tab ("Find") in the Armory window instead of its own window. Ctrl-click on the minimap button and /guildie find open that tab.
 

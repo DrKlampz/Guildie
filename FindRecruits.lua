@@ -7,7 +7,7 @@ ns.FindRecruits = FR
 
 local DEF = {
     recruitMsg = "Hi {name}! I'm in <{guild}>, a friendly guild. Want to hear about it? Just say no and I won't ask again.",
-    recruitDays = 7, recruitCap = 15, recruitDown = 3, recruitUp = 5, recruitZone = true,
+    recruitDays = 7, recruitCap = 15, recruitDown = 3, recruitUp = 5, recruitZone = true, recruitAny = false,
 }
 local function Opt(k)
     local v = ns.db and ns.db[k]
@@ -87,6 +87,7 @@ function FR.Scan()
     local me = UnitLevel("player") or 1
     local lo = math.max(1, me - (tonumber(Opt("recruitDown")) or 3))
     local hi = math.min(80, me + (tonumber(Opt("recruitUp")) or 5))
+    if Opt("recruitAny") then lo, hi = 1, 80 end
     local q = lo .. "-" .. hi
     if Opt("recruitZone") then
         local z = GetRealZoneText and GetRealZoneText()
@@ -152,6 +153,9 @@ local function Build(parent)
     local zone = W.Check(f, "This zone only", function(self) ns.db.recruitZone = self:GetChecked() and true or false end)
     zone:SetPoint("LEFT", scan, "RIGHT", 10, 0)
     f.zone = zone
+    local any = W.Check(f, "Any level", function(self) ns.db.recruitAny = self:GetChecked() and true or false end)
+    any:SetPoint("LEFT", zone.label, "RIGHT", 16, -1)
+    f.any = any
 
     local function Num(label, key, x, y, w)
         local l = W.Label(f, "GameFontHighlightSmall", label)
@@ -200,6 +204,7 @@ end
 local function Show()
     if not frame then return end
     frame.zone:SetChecked(Opt("recruitZone"))
+    frame.any:SetChecked(Opt("recruitAny"))
     for _, k in ipairs({ "recruitDown", "recruitUp", "recruitDays", "recruitCap" }) do frame[k]:SetText(tostring(Opt(k))) end
     frame.msg:SetText(Opt("recruitMsg")) frame.msg:SetCursorPosition(0)
     FR.Draw()
