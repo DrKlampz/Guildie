@@ -93,7 +93,11 @@ function FR.Scan()
         local z = GetRealZoneText and GetRealZoneText()
         if z and z ~= "" then q = q .. ' z-"' .. z .. '"' end
     end
-    if C_FriendList.SetWhoToUi then pcall(C_FriendList.SetWhoToUi, true) end
+    -- keep the Who window shut and the results out of chat: send with the UI route off, swallow the
+    -- result lines while we wait, and close the friends/Who window if the game opened it anyway
+    if C_FriendList.SetWhoToUi then pcall(C_FriendList.SetWhoToUi, false) end
+    FR.wasOpen = _G.FriendsFrame and FriendsFrame:IsShown() or false
+    FR.quietUntil = GetTime() + 8
     local ok = pcall(C_FriendList.SendWho, q)
     if status then status:SetText(ok and ("Searching: " .. q .. " ...") or "Search failed. Try again in a few seconds.") end
 end
@@ -237,6 +241,10 @@ f:SetScript("OnEvent", function(_, event, text, sender)
         if frame and frame:IsVisible() then
             if C_FriendList and C_FriendList.SetWhoToUi then pcall(C_FriendList.SetWhoToUi, false) end
             Collect()
+            FR.quietUntil = GetTime() + 1
+            if _G.FriendsFrame and FriendsFrame:IsShown() and not FR.wasOpen then
+                if _G.HideUIPanel then pcall(HideUIPanel, FriendsFrame) else FriendsFrame:Hide() end
+            end
         end
     elseif event == "CHAT_MSG_WHISPER" then
         if not (ns.db and sender and text) or (ns.IsSecret and (ns.IsSecret(text) or ns.IsSecret(sender))) then return end
@@ -249,3 +257,14 @@ f:SetScript("OnEvent", function(_, event, text, sender)
         end
     end
 end)
+
+-- the game prints every /who result line and a "N players total" line to chat; hide those while we search
+if _G.ChatFrame_AddMessageEventFilter then
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", function(_, _, msg)
+        if not (FR.quietUntil and GetTime() < FR.quietUntil) then return false end
+        if type(msg) ~= "string" or (ns.IsSecret and ns.IsSecret(msg)) then return false end
+        if msg:find("|Hplayer:", 1, true) and msg:find("%d") then return true end
+        if msg:find("players? total") or msg:find("player total") then return true end
+        return false
+    end)
+end

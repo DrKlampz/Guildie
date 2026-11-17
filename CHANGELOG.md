@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.14.3
+- Find recruits: searching no longer pops up the Who window or fills your chat with the results.
+
 ## v1.14.2
 - Find recruits: an "Any level" box, for when you don't care what level they are.
 
