@@ -31,9 +31,12 @@ local function SentToday()
     return 0
 end
 
-local function Expand(text, name)
+local function Expand(text, name, zone)
     local guild = (GetGuildInfo and GetGuildInfo("player")) or "my guild"
-    text = text:gsub("{name}", ns.Short and ns.Short(name) or name):gsub("{guild}", guild)
+    local n = ns.Short and ns.Short(name) or name
+    text = text:gsub("{name}", function() return n end)
+    text = text:gsub("{guild}", function() return guild end)
+    text = text:gsub("{zone}", function() return (zone and zone ~= "") and zone or "the world" end)
     return text
 end
 
@@ -123,7 +126,7 @@ local function Whisper(e)
         if status then status:SetText("Daily limit reached (" .. Opt("recruitCap") .. "). Try again tomorrow.") end
         return
     end
-    local text = Expand(Opt("recruitMsg"), e.name)
+    local text = Expand(Opt("recruitMsg"), e.name, e.area)
     if ns.Trim(text) == "" then if status then status:SetText("The message is empty.") end return end
     ns.SendNow(text, "WHISPER", e.name)
     Tbl("recruitSeen")[Key(e.name)] = time()
@@ -174,7 +177,7 @@ local function Build()
     Num("Don't repeat for (days)", "recruitDays", 16, -92, 34)
     Num("Max whispers a day", "recruitCap", 250, -92, 34)
 
-    local ml = W.Label(f, "GameFontNormalSmall", "Message ({name} and {guild} are filled in)")
+    local ml = W.Label(f, "GameFontNormalSmall", "Message ({name}, {guild} and {zone} are filled in)")
     ml:SetPoint("TOPLEFT", 16, -122)
     local msg = W.Edit(f, 430, false, 250)
     msg:SetPoint("TOPLEFT", 20, -138)

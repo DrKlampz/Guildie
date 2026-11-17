@@ -1,7 +1,7 @@
 # Guildie
 
 ## v1.14.0
-- New: Find recruits. Ctrl-click the minimap button (or /guildie find) to search for players without a guild near your level, then whisper them one click at a time. Choose the level range, whether to stay in your zone, how many days before the same player can be asked again, a daily limit, and the message ({name} and {guild} are filled in). Skip a player to never ask them again; a reply of "no" blocks them too.
+- New: Find recruits. Ctrl-click the minimap button (or /guildie find) to search for players without a guild near your level, then whisper them one click at a time. Choose the level range, whether to stay in your zone, how many days before the same player can be asked again, a daily limit, and the message ({name}, {guild} and {zone} are filled in). Skip a player to never ask them again; a reply of "no" blocks them too.
 
 ## v1.13.1
 - Invites: the popup no longer keeps telling you to /ginvite someone you already invited. A request now comes off the list when the person is in your guild, and a leftover invite popup is taken down when nothing is waiting any more.
