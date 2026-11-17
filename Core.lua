@@ -1195,6 +1195,8 @@ SlashCmdList.GUILDIE = function(input)
             local off, label = rest:match("^(%S+)%s*(.*)$")
             if ns.Timezones then ns.Timezones.Set(off, label) end
         end
+    elseif cmd == "recruit" or cmd == "find" then
+        if ns.FindRecruits then ns.FindRecruits.Command(rest) end
     elseif cmd == "map" then
         if ns.MapPins then ns.MapPins.Command(rest) end
     elseif cmd == "zone" or cmd == "where" then

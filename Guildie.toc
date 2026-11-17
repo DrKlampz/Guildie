@@ -28,6 +28,7 @@ Anniversaries.lua
 Timezones.lua
 Zone.lua
 MapPins.lua
+FindRecruits.lua
 UI.lua
 ArmoryUI.lua
 Minimap.lua

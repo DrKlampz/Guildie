@@ -58,5 +58,6 @@ ns.WinLook.Setup({
     windows = {
         { id = "main", name = "Main window", global = "GuildieFrame", strip = "template", defaultOn = true, title = function(f) return f.TitleText end },
         { id = "armory", name = "Armory", global = "GuildieArmoryFrame", strip = "template", defaultOn = true, title = function(f) return f.TitleText end },
+        { id = "recruit", name = "Find recruits", global = "GuildieRecruitFrame", strip = "template", defaultOn = true, title = function(f) return f.TitleText end },
     },
 })
