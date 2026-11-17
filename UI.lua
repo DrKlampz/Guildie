@@ -223,7 +223,9 @@ local function Build()
 
     -- Extras --------------------------------------------------------------
     Check("gamerCounter", "Count gamer words in guild chat",
-        "Counts how many times profanity or slurs appear in guild chat while you're online, and shows the total in the Armory.\n\nIt only keeps a number: never the words, and never who said them. Nothing is shared with other players.")
+        "Counts how many times profanity or slurs appear in guild chat while you're online, and shows the total in the Armory.\n\nIt only keeps a number: never the words, and never who said them.")
+    Check("gamerShare", "Share gamer word counts with guildmates",
+        "Guildmates swap the number of gamer words seen in each hour, so the total also covers the times you were offline. Only an hour and a number are shared: never the words, and never who said them.")
     Check("minimapShow", "Show minimap button",
         "Left-click the minimap button for the Guild Armory, right-click for these settings. Drag it to move it.")
 

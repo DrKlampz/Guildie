@@ -42,6 +42,7 @@ ns.DEFAULTS = {
     -- Gamer word counter (shown in the Armory). Only ever a number.
     gamerCounter   = true,
     gamerWords     = 0,
+    gamerShare     = true,
     -- Stats
     stats          = { invited = 0, welcomed = 0 },
 }

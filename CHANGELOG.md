@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.15.0
+- Gamer words: the total now covers the times you were offline too. Guildmates share how many were seen in each hour (just an hour and a number: never the words or who said them) and the biggest number for each hour is used. Turn it off with "Share gamer word counts with guildmates" in the settings.
+
 ## v1.14.4
 - Find recruits: also closes the Looking For Group window if the game opens it when a search comes back.
 

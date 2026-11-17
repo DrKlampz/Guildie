@@ -508,11 +508,11 @@ local function Build()
         local G = ns.GamerWords
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
         GameTooltip:SetText("Gamer words", 1, 1, 1)
-        GameTooltip:AddLine("Profanity and slurs seen in guild chat while you're online.", 0.85, 0.85, 0.85, true)
+        GameTooltip:AddLine("Profanity and slurs seen in guild chat, including what guildmates saw while you were offline.", 0.85, 0.85, 0.85, true)
         if G then
             GameTooltip:AddLine(("This session: %s     Total: %s"):format(Commas(G.session), Commas(G.Total())), 1, 0.82, 0)
         end
-        GameTooltip:AddLine("Only a number is kept: never which word, and never who said it. Nothing is shared with other players.", 0.6, 0.6, 0.6, true)
+        GameTooltip:AddLine("Only a number per hour is kept and shared: never which word, and never who said it. You can stop sharing in Guildie settings.", 0.6, 0.6, 0.6, true)
         GameTooltip:AddLine("Turn it off in Guildie settings. /guildie words reset starts over.", 0.6, 0.6, 0.6, true)
         GameTooltip:Show()
     end)

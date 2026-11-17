@@ -31,6 +31,7 @@ local function Options()
             L.Koff("Share my gold", db, "shareGold"),
             L.Kon("Show alts under their main", db, "groupAlts"),
             L.Kon("Gamer word counter in the Armory", db, "gamerCounter"),
+            L.Kon("Share gamer word counts with guildmates", db, "gamerShare"),
         } },
         { id = "dates", title = "Birthdays and anniversaries", rows = {
             L.Kon("Birthday messages", db, "birthdayEnabled"),
