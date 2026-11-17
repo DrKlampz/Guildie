@@ -22,7 +22,7 @@ local function Key(n) return ns.KeyOf and ns.KeyOf(n) or (n or ""):lower() end
 local function Day() return date("%Y-%m-%d") end
 
 local frame, rows, found = nil, {}, {}
-local ROWS = 12
+local ROWS = 14
 local status
 
 local function SentToday()
@@ -140,24 +140,15 @@ local function Skip(e)
     Remove(e)
 end
 
-local function Build()
+local function Build(parent)
     local W = ns.W
-    local ok, f = pcall(CreateFrame, "Frame", "GuildieRecruitFrame", UIParent, "BasicFrameTemplateWithInset")
-    if not ok then return end
+    local f = CreateFrame("Frame", nil, parent)
     frame = f
-    f:SetSize(470, 470)
-    f:SetPoint("CENTER")
-    f:SetFrameStrata("DIALOG")
-    f:SetMovable(true) f:EnableMouse(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    if f.TitleText then f.TitleText:SetText("Guildie - Find recruits") end
-    if ns.WinLook then ns.WinLook.Attach("recruit", f) end
-    f:Hide()
 
+    local title = W.Label(f, "GameFontNormalLarge", "Find recruits")
+    title:SetPoint("TOPLEFT", 0, 0)
     local scan = W.Button(f, "Search", 90, FR.Scan)
-    scan:SetPoint("TOPLEFT", 14, -32)
+    scan:SetPoint("TOPLEFT", 0, -28)
     local zone = W.Check(f, "This zone only", function(self) ns.db.recruitZone = self:GetChecked() and true or false end)
     zone:SetPoint("LEFT", scan, "RIGHT", 10, 0)
     f.zone = zone
@@ -172,28 +163,28 @@ local function Build()
         end)
         f[key] = e
     end
-    Num("Levels: me minus", "recruitDown", 16, -66)
-    Num("plus", "recruitUp", 170, -66)
-    Num("Don't repeat for (days)", "recruitDays", 16, -92, 34)
-    Num("Max whispers a day", "recruitCap", 250, -92, 34)
+    Num("Levels: me minus", "recruitDown", 2, -62)
+    Num("plus", "recruitUp", 170, -62)
+    Num("Don't repeat for (days)", "recruitDays", 2, -88, 34)
+    Num("Max whispers a day", "recruitCap", 250, -88, 34)
 
     local ml = W.Label(f, "GameFontNormalSmall", "Message ({name}, {guild} and {zone} are filled in)")
-    ml:SetPoint("TOPLEFT", 16, -122)
-    local msg = W.Edit(f, 430, false, 250)
-    msg:SetPoint("TOPLEFT", 20, -138)
+    ml:SetPoint("TOPLEFT", 2, -118)
+    local msg = W.Edit(f, 600, false, 250)
+    msg:SetPoint("TOPLEFT", 6, -134)
     msg:SetScript("OnTextChanged", function(self, user) if user then ns.db.recruitMsg = self:GetText() end end)
     f.msg = msg
 
     status = W.Label(f, "GameFontHighlightSmall", "Press Search to find players without a guild.")
-    status:SetPoint("TOPLEFT", 16, -168)
-    status:SetWidth(440) status:SetJustifyH("LEFT")
+    status:SetPoint("TOPLEFT", 2, -164)
+    status:SetWidth(700) status:SetJustifyH("LEFT")
 
     for i = 1, ROWS do
         local r = CreateFrame("Frame", nil, f)
-        r:SetSize(440, 22)
-        r:SetPoint("TOPLEFT", 14, -190 - (i - 1) * 24)
+        r:SetSize(640, 22)
+        r:SetPoint("TOPLEFT", 0, -186 - (i - 1) * 24)
         r.text = W.Label(r, "GameFontHighlightSmall", "")
-        r.text:SetPoint("LEFT", 2, 0) r.text:SetWidth(280) r.text:SetJustifyH("LEFT")
+        r.text:SetPoint("LEFT", 2, 0) r.text:SetWidth(460) r.text:SetJustifyH("LEFT")
         local w = W.Button(r, "Whisper", 70, function() if r.entry then Whisper(r.entry) end end)
         w:SetPoint("RIGHT", -64, 0)
         local s = W.Button(r, "Skip", 56, function() if r.entry then Skip(r.entry) end end)
@@ -201,20 +192,24 @@ local function Build()
         r:Hide()
         rows[i] = r
     end
-    local note = W.Label(f, "GameFontDisableSmall", "Skip = never ask this player. A reply of \"no\" blocks them too.")
-    note:SetPoint("BOTTOMLEFT", 16, 12)
+    local note = W.Label(f, "GameFontDisableSmall", "Skip = never ask this player. A reply of \"no\" blocks them too. Nothing is sent until you click Whisper.")
+    note:SetPoint("BOTTOMLEFT", 2, 0)
+    return f
 end
 
-function FR.Toggle()
-    if not frame then Build() end
+local function Show()
     if not frame then return end
-    if frame:IsShown() then frame:Hide() return end
     frame.zone:SetChecked(Opt("recruitZone"))
     for _, k in ipairs({ "recruitDown", "recruitUp", "recruitDays", "recruitCap" }) do frame[k]:SetText(tostring(Opt(k))) end
     frame.msg:SetText(Opt("recruitMsg")) frame.msg:SetCursorPosition(0)
     FR.Draw()
-    frame:Show()
 end
+
+function FR.Toggle()
+    if ns.OpenArmoryTab then ns.OpenArmoryTab("findrecruits") end
+end
+
+ns.RegisterArmoryTab("findrecruits", "Find", Build, Show)
 
 function FR.Command(rest)
     local sub = ns.Trim(rest or ""):lower()
@@ -234,7 +229,7 @@ f:RegisterEvent("WHO_LIST_UPDATE")
 f:RegisterEvent("CHAT_MSG_WHISPER")
 f:SetScript("OnEvent", function(_, event, text, sender)
     if event == "WHO_LIST_UPDATE" then
-        if frame and frame:IsShown() then
+        if frame and frame:IsVisible() then
             if C_FriendList and C_FriendList.SetWhoToUi then pcall(C_FriendList.SetWhoToUi, false) end
             Collect()
         end

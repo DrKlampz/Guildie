@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.14.1
+- Find recruits is now a tab ("Find") in the Armory window instead of its own window. Ctrl-click on the minimap button and /guildie find open that tab.
+
 ## v1.14.0
 - New: Find recruits. Ctrl-click the minimap button (or /guildie find) to search for players without a guild near your level, then whisper them one click at a time. Choose the level range, whether to stay in your zone, how many days before the same player can be asked again, a daily limit, and the message ({name}, {guild} and {zone} are filled in). Skip a player to never ask them again; a reply of "no" blocks them too.
 
