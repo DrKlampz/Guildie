@@ -59,7 +59,9 @@ local function Usable(name)
     if key == Key(UnitName("player")) or Base(name) == Base(UnitName("player")) then return false end
     if Listed(Tbl("recruitBlock"), name) then return false end
     local t = Listed(Tbl("recruitSeen"), name)
-    if t and (time() - t) < Opt("recruitDays") * 86400 then return false end
+    -- anyone you whispered is left alone for at least a week, whether or not they answered
+    local days = math.max(7, tonumber(Opt("recruitDays")) or 7)
+    if t and (time() - t) < days * 86400 then return false end
     return true
 end
 
@@ -214,7 +216,7 @@ local function Build(parent)
     end
     Num("Levels: me minus", "recruitDown", 2, -62)
     Num("plus", "recruitUp", 170, -62)
-    Num("Don't repeat for (days)", "recruitDays", 2, -88, 34)
+    Num("Don't repeat for (days, 7 or more)", "recruitDays", 2, -88, 34)
     Num("Max whispers a day", "recruitCap", 250, -88, 34)
 
     local ml = W.Label(f, "GameFontNormalSmall", "Message ({name}, {guild} and {zone} are filled in)")
