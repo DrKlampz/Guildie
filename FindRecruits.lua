@@ -19,6 +19,20 @@ local function Tbl(k)
     return ns.db[k]
 end
 local function Key(n) return ns.KeyOf and ns.KeyOf(n) or (n or ""):lower() end
+-- A player can show up as "Name", "Name-Realm" or "Name Realm" depending on where the game reports
+-- them (a /who row, a whisper, a system line). The lists are therefore matched on the bare character
+-- name, so a player skipped from one place is skipped everywhere. Older entries keep working too.
+local function Base(n)
+    n = tostring(n or ""):lower():gsub("^%s+", "")
+    return (n:match("^[^%s%-]+")) or n
+end
+local function Listed(list, name)
+    return list[Key(name)] or list[Base(name)] or false
+end
+local function Mark(list, name)
+    list[Key(name)] = true
+    list[Base(name)] = true
+end
 local function Day() return date("%Y-%m-%d") end
 
 local frame, rows, found = nil, {}, {}
@@ -42,9 +56,9 @@ end
 
 local function Usable(name)
     local key = Key(name)
-    if key == Key(UnitName("player")) then return false end
-    if Tbl("recruitBlock")[key] then return false end
-    local t = Tbl("recruitSeen")[key]
+    if key == Key(UnitName("player")) or Base(name) == Base(UnitName("player")) then return false end
+    if Listed(Tbl("recruitBlock"), name) then return false end
+    local t = Listed(Tbl("recruitSeen"), name)
     if t and (time() - t) < Opt("recruitDays") * 86400 then return false end
     return true
 end
@@ -161,13 +175,14 @@ local function Whisper(e)
     if ns.Trim(text) == "" then if status then status:SetText("The message is empty.") end return end
     ns.SendNow(text, "WHISPER", e.name)
     Tbl("recruitSeen")[Key(e.name)] = time()
+    Tbl("recruitSeen")[Base(e.name)] = time()
     ns.db.recruitDay = { d = Day(), n = sent + 1 }
     if status then status:SetText(("Whispered %s. Sent today: %d of %d."):format(ns.Short and ns.Short(e.name) or e.name, sent + 1, Opt("recruitCap"))) end
     Remove(e)
 end
 
 local function Skip(e)
-    Tbl("recruitBlock")[Key(e.name)] = true
+    Mark(Tbl("recruitBlock"), e.name)
     Remove(e)
 end
 
@@ -248,7 +263,22 @@ ns.RegisterArmoryTab("findrecruits", "Find", Build, Show)
 
 function FR.Command(rest)
     local sub = ns.Trim(rest or ""):lower()
-    if sub == "reset" then
+    local verb, who = sub:match("^(%a+)%s*(.-)$")
+    if verb == "block" and who ~= "" then
+        Mark(Tbl("recruitBlock"), who)
+        ns.Print("Find recruits: " .. who .. " will never be asked.")
+    elseif verb == "unblock" and who ~= "" then
+        Tbl("recruitBlock")[Key(who)] = nil
+        Tbl("recruitBlock")[Base(who)] = nil
+        Tbl("recruitSeen")[Key(who)] = nil
+        Tbl("recruitSeen")[Base(who)] = nil
+        ns.Print("Find recruits: " .. who .. " can be asked again.")
+    elseif verb == "blocked" then
+        local n, names = 0, {}
+        for k in pairs(Tbl("recruitBlock")) do n = n + 1 names[#names + 1] = k end
+        table.sort(names)
+        ns.Print(("Find recruits: %d blocked%s"):format(n, n > 0 and (": " .. table.concat(names, ", ")) or "."))
+    elseif sub == "reset" then
         ns.db.recruitSeen, ns.db.recruitBlock = {}, {}
         ns.Print("Find recruits: cleared who you have contacted and who you skipped.")
     else
@@ -272,11 +302,13 @@ f:SetScript("OnEvent", function(_, event, text, sender)
         end
     elseif event == "CHAT_MSG_WHISPER" then
         if not (ns.db and sender and text) or (ns.IsSecret and (ns.IsSecret(text) or ns.IsSecret(sender))) then return end
-        local t = Tbl("recruitSeen")[Key(sender)]
+        local t = Listed(Tbl("recruitSeen"), sender)
         if t and time() - t < 3 * 86400 then
-            local s = text:lower():gsub("[%p%s]+$", ""):gsub("^%s+", "")
-            if s == "no" or s == "nope" or s == "stop" or s == "no thanks" or s == "no thank you" or s == "not interested" then
-                Tbl("recruitBlock")[Key(sender)] = true
+            local s = text:lower():gsub("^[%s%p]+", ""):gsub("[%s%p]+$", "")
+            if s:find("^no%f[%W]") or s:find("^nope") or s:find("^nah") or s:find("^stop%f[%W]")
+                or s:find("^not interested") or s:find("^no thank") or s:find("leave me alone")
+                or s:find("^don'?t ") or s:find("^im good") or s:find("^i'?m good") then
+                Mark(Tbl("recruitBlock"), sender)
             end
         end
     end
