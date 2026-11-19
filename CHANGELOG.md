@@ -1,6 +1,6 @@
 # Guildie
 
-## Unreleased
+## v1.15.4
 - Removed the add-on-to-add-on theming hooks and cross-add-on names from the window look code; the shared look sync between your add-ons works the same.
 - Escape now closes the map pin options window instead of opening the game menu.
 - The "Pulse the flair" option now also pulses the edge finish (soft, bevel, double line and glow), not just the corner studs.
