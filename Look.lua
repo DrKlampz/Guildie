@@ -145,6 +145,30 @@ local PRESETS = {
         look = { bgStyle = "leather", cornerArt = "spike", crest = "horns", edgeArt = "rope", banner = "plaque", divider = "beads", watermark = "druid", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1 } },
     c_druid5 = { name = "Druid: Emerald dream (art)", bg = { 0.38, 0.20, 0.04 }, edge = { 1.0, 0.52, 0.1 }, class = "DRUID",
         look = { bgStyle = "damask", cornerArt = "vine", crest = "wings", edgeArt = "beads", banner = "gem", divider = "flourish", watermark = "laurel", edgeFx = "soft", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    alliance2 = { name = "Alliance: Lion court (art)", bg = { 0.1, 0.18, 0.42 }, edge = { 0.96, 0.82, 0.38 },
+        look = { bgStyle = "marble", cornerArt = "filigree", crest = "crown", edgeArt = "beads", banner = "ribbon", divider = "flourish", watermark = "crestA", edgeFx = "bevel", flair = "royal", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    alliance3 = { name = "Alliance: Stormwind keep (art)", bg = { 0.12, 0.17, 0.3 }, edge = { 0.8, 0.84, 0.92 },
+        look = { bgStyle = "stone", cornerArt = "plate", crest = "wings", edgeArt = "chain", banner = "plaque", divider = "diamond", watermark = "crestA", edgeFx = "double", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    alliance4 = { name = "Alliance: Royal banner (art)", bg = { 0.14, 0.22, 0.5 }, edge = { 1.0, 0.88, 0.45 },
+        look = { bgStyle = "damask", cornerArt = "filigree", crest = "scroll", edgeArt = "rope", banner = "scroll", divider = "flourish", watermark = "laurel", edgeFx = "glow", flair = "royal", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    horde2 = { name = "Horde: Warchief's hall (art)", bg = { 0.26, 0.08, 0.07 }, edge = { 0.95, 0.35, 0.2 },
+        look = { bgStyle = "leather", cornerArt = "spike", crest = "horns", edgeArt = "spikes", banner = "plaque", divider = "diamond", watermark = "crestH", edgeFx = "bevel", flair = "none", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    horde3 = { name = "Horde: Orgrimmar forge (art)", bg = { 0.2, 0.1, 0.08 }, edge = { 0.85, 0.55, 0.25 },
+        look = { bgStyle = "plate", cornerArt = "plate", crest = "skull", edgeArt = "chain", banner = "plaque", divider = "beads", watermark = "crestH", edgeFx = "double", flair = "none", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    horde4 = { name = "Horde: Blood and thunder (art)", bg = { 0.32, 0.06, 0.06 }, edge = { 1.0, 0.25, 0.15 },
+        look = { bgStyle = "rock", cornerArt = "spike", crest = "horns", edgeArt = "spikes", banner = "gem", divider = "diamond", watermark = "warrior", edgeFx = "glow", flair = "none", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    violet2 = { name = "Violet citadel: Archmage tower (art)", bg = { 0.2, 0.1, 0.36 }, edge = { 0.8, 0.6, 1.0 },
+        look = { bgStyle = "paper", cornerArt = "arcane", crest = "scroll", edgeArt = "runes", banner = "scroll", divider = "flourish", watermark = "kirintor", edgeFx = "glow", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    violet3 = { name = "Violet citadel: Floating city (art)", bg = { 0.14, 0.1, 0.3 }, edge = { 0.65, 0.55, 1.0 },
+        look = { bgStyle = "marble", cornerArt = "arcane", crest = "gem", edgeArt = "beads", banner = "gem", divider = "diamond", watermark = "kirintor", edgeFx = "double", flair = "none", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    violet4 = { name = "Violet citadel: Runed vault (art)", bg = { 0.12, 0.06, 0.26 }, edge = { 0.85, 0.45, 1.0 },
+        look = { bgStyle = "runes", cornerArt = "rune", crest = "crown", edgeArt = "runes", banner = "plaque", divider = "diamond", watermark = "rings", edgeFx = "glow", flair = "none", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    fallen2 = { name = "Fallen kingdom: Ashen throne (art)", bg = { 0.12, 0.12, 0.2 }, edge = { 0.72, 0.78, 0.9 },
+        look = { bgStyle = "damask", cornerArt = "plate", crest = "crown", edgeArt = "chain", banner = "scroll", divider = "flourish", watermark = "laurel", edgeFx = "bevel", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    fallen3 = { name = "Fallen kingdom: Plagued capital (art)", bg = { 0.14, 0.18, 0.14 }, edge = { 0.6, 0.85, 0.45 },
+        look = { bgStyle = "scales", cornerArt = "spike", crest = "skull", edgeArt = "spikes", banner = "plaque", divider = "diamond", watermark = "shield", edgeFx = "glow", flair = "none", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    fallen4 = { name = "Fallen kingdom: Silver vigil (art)", bg = { 0.1, 0.14, 0.26 }, edge = { 0.85, 0.88, 0.95 },
+        look = { bgStyle = "marble", cornerArt = "filigree", crest = "wings", edgeArt = "beads", banner = "ribbon", divider = "flourish", watermark = "shield", edgeFx = "double", flair = "royal", depth = 0.45, bgNoTint = false, texScale = 1 } },
     grove    = { name = "Moonlit grove (art)", bg = { 0.20, 0.12, 0.38 }, edge = { 0.78, 0.68, 1.00 },
                  look = { bgStyle = "arcane", cornerArt = "vine", crest = "crescent", edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "druid", edgeFx = "glow", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
     plague   = { name = "Plaguelands (art)", bg = { 0.16, 0.26, 0.14 }, edge = { 0.64, 0.92, 0.42 },
@@ -172,7 +196,7 @@ local PRESETS = {
 }
 local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "ember", "void", "frost", "mono", "light",
     "arcane", "forge", "glade", "tome", "runestone", "court", "dragon", "oak",
-    "myclass", "alliance", "horde", "violet", "fallen", "grove", "plague",
+    "myclass", "alliance", "horde", "violet", "fallen", "alliance2", "alliance3", "alliance4", "horde2", "horde3", "horde4", "violet2", "violet3", "violet4", "fallen2", "fallen3", "fallen4", "grove", "plague",
     "c_warrior", "c_paladin", "c_hunter", "c_rogue", "c_priest", "c_shaman", "c_mage", "c_warlock", "c_druid",
     "c_warrior2", "c_warrior3", "c_warrior4", "c_warrior5", "c_paladin2", "c_paladin3", "c_paladin4", "c_paladin5", "c_hunter2", "c_hunter3", "c_hunter4", "c_hunter5", "c_rogue2", "c_rogue3", "c_rogue4", "c_rogue5", "c_priest2", "c_priest3", "c_priest4", "c_priest5", "c_shaman2", "c_shaman3", "c_shaman4", "c_shaman5", "c_mage2", "c_mage3", "c_mage4", "c_mage5", "c_warlock2", "c_warlock3", "c_warlock4", "c_warlock5", "c_druid2", "c_druid3", "c_druid4", "c_druid5" }
 
@@ -966,7 +990,10 @@ local function Art2(bg, s, inset, e, spec, frame)
             if c then t:SetTexCoord(c[1], c[2], c[3], c[4]) end
             t:SetVertexColor(1, 1, 1, 1)
         end
-        if wm == "kirintor" then
+        if wm == "crestA" or wm == "crestH" then
+            t:SetTexture("Interface\\TargetingFrame\\UI-PVP-" .. (wm == "crestA" and "Alliance" or "Horde"))
+            t:SetTexCoord(0, 0.62, 0, 0.62) t:SetVertexColor(1, 1, 1, 1)
+        elseif wm == "kirintor" then
             t:SetTexture("Interface\\Icons\\Achievement_Reputation_KirinTor")
             t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1)
         elseif wm == "faction" then
@@ -1606,9 +1633,9 @@ local SECTIONS = {
           names = { none = "None", ribbon = "Ribbon", plaque = "Riveted plaque", scroll = "Scroll", gem = "Jeweled plate" } },
         { key = "divider", kind = "cycle", label = "Divider under the title", values = { "none", "flourish", "beads", "diamond" },
           names = { none = "None", flourish = "Flourish", beads = "Beads", diamond = "Diamonds" } },
-        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "classicon", "specicon", "faction", "kirintor", "compass", "shield", "laurel", "star", "rings",
+        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "classicon", "specicon", "faction", "crestA", "crestH", "kirintor", "compass", "shield", "laurel", "star", "rings",
                      "warrior", "paladin", "hunter", "rogue", "priest", "shaman", "mage", "warlock", "druid" },
-          names = { none = "None", mine = "Your class (art)", classicon = "Your class (the game's icon)", specicon = "Your talent tree (the game's icon)", faction = "Your faction (the game's crest)", kirintor = "Violet city-state (the game's icon)",
+          names = { none = "None", mine = "Your class (art)", classicon = "Your class (the game's icon)", specicon = "Your talent tree (the game's icon)", faction = "Your faction (the game's crest)", kirintor = "Violet city-state (the game's icon)", crestA = "Alliance crest (the game's icon)", crestH = "Horde crest (the game's icon)",
                     compass = "Compass rose", shield = "Shield", laurel = "Laurel wreath", star = "Eight-point star", rings = "Runic rings",
                     warrior = "Warrior", paladin = "Paladin", hunter = "Hunter", rogue = "Rogue", priest = "Priest", shaman = "Shaman",
                     mage = "Mage", warlock = "Warlock", druid = "Druid" } },
