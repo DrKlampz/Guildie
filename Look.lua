@@ -848,8 +848,10 @@ local function ApplyOne(spec)
             if not frame.lookScale then frame.lookScale = frame:GetScale() or 1 end
             frame:SetScale(math.max(0.4, math.min(2, tonumber(s.scale) or 1)))
         end
-        if not frame.lookAlpha then frame.lookAlpha = frame:GetAlpha() or 1 end
-        frame:SetAlpha(math.max(0.1, math.min(1, tonumber(s.frameAlpha) or 1)))
+        if not spec.noAlpha then   -- a window that fades itself (Baggie in combat) keeps control of its own alpha
+            if not frame.lookAlpha then frame.lookAlpha = frame:GetAlpha() or 1 end
+            frame:SetAlpha(math.max(0.1, math.min(1, tonumber(s.frameAlpha) or 1)))
+        end
         Safe(ApplyFonts, frame, s, true, spec)
         Safe(ApplyButtons, frame, s, true, spec)
         frame.lookLock = s.lock and true or false
