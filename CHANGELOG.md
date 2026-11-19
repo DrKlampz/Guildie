@@ -1,6 +1,6 @@
 # Guildie
 
-## Unreleased
+## v1.15.3
 - Look sync: the first time your add-ons meet, they now all take on the same look right away (Baggie's, if it is installed) instead of waiting for you to change something. Baggie no longer shares its title bar color, which means something different there.
 
 ## v1.15.2
