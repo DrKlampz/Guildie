@@ -872,9 +872,106 @@ local function ApplyOne(spec)
     end
 end
 
+-- share my look with my other add-ons (the newest change wins; one shared hub in _G.GreedLookShare)
+local SHARE_SKIP = { follow = true, lock = true, scale = true, defOn = true }
+local Hub = _G.GreedLookShare
+if not Hub then Hub = { m = {} } _G.GreedLookShare = Hub end
+local sharing = false
+local function ShareOn() local L = Store() return L and L.shareOn ~= false end
+local function ShareSnap()
+    if not (windows and windows[1]) then return nil end
+    local o = Own(windows[1].id)
+    if not o then return nil end
+    local snap = {}
+    for k in pairs(Defaults()) do
+        if not SHARE_SKIP[k] and o[k] ~= nil then snap[k] = Copy(o[k]) end
+    end
+    return snap
+end
+local function ShareSig(snap)
+    local keys = {}
+    for k in pairs(snap) do keys[#keys + 1] = k end
+    table.sort(keys)
+    local out = {}
+    for _, k in ipairs(keys) do
+        local v = snap[k]
+        if type(v) == "table" then
+            local p = {}
+            for i = 1, #v do p[i] = string.format("%.3f", tonumber(v[i]) or 0) end
+            v = table.concat(p, ",")
+        elseif type(v) == "number" then
+            v = string.format("%.4f", v)
+        end
+        out[#out + 1] = k .. "=" .. tostring(v)
+    end
+    return table.concat(out, ";")
+end
+local function ShareTake(snap, stamp)
+    local L = Store()
+    if not (L and snap and windows[1]) then return end
+    local o = Own(windows[1].id)
+    for k, v in pairs(snap) do o[k] = Copy(v) end
+    L.shareSig = ShareSig(ShareSnap())
+    L.shareStamp = stamp
+    sharing = true
+    Safe(ApplyAll)
+    if win and win:IsShown() then
+        for id in pairs(built) do Safe(Relayout, id) end
+        Safe(RefreshAll)
+    end
+    sharing = false
+end
+local function SharePush(snap, stamp)
+    local mine = Hub.m[tostring(cfg and cfg.title)]
+    for _, m in pairs(Hub.m) do
+        if m ~= mine and m.on() and m.stamp() < stamp then Safe(m.take, snap, stamp) end
+    end
+end
+local function SharePull()
+    local mine = Hub.m[tostring(cfg and cfg.title)]
+    local L = Store()
+    if not L then return false end
+    local best, bs = nil, L.shareStamp or 0
+    for _, m in pairs(Hub.m) do
+        if m ~= mine and m.on() and m.stamp() > bs then best, bs = m, m.stamp() end
+    end
+    if best and best.snap then
+        local snap = best.snap()
+        if snap then ShareTake(snap, bs) return true end
+    end
+    return false
+end
+local function ShareCheck()
+    if sharing then return end
+    local L = Store()
+    if not (L and windows and windows[1]) then return end
+    local snap = ShareSnap()
+    if not snap then return end
+    local sig = ShareSig(snap)
+    if L.shareSig == nil then L.shareSig = sig L.shareStamp = L.shareStamp or 0 return end
+    if sig == L.shareSig then return end
+    L.shareSig = sig
+    L.shareStamp = (_G.time and _G.time()) or 1
+    if ShareOn() then SharePush(snap, L.shareStamp) end
+end
+local function ShareToggle()
+    local L = Store()
+    if not L then return end
+    L.shareOn = not ShareOn()
+    if L.shareOn and not SharePull() then
+        local snap = ShareSnap()
+        if snap then
+            L.shareSig = ShareSig(snap)
+            L.shareStamp = (_G.time and _G.time()) or 1
+            SharePush(snap, L.shareStamp)
+        end
+    end
+end
+
 ApplyAll = function()
     for _, spec in ipairs(windows) do Safe(ApplyOne, spec) end
     if win and byId["_look"] then Safe(ApplyOne, byId["_look"]) end
+    Safe(ShareCheck)
 end
 
 -- the add-on calls this after it has created a window
@@ -1638,6 +1735,26 @@ local function Build()
         top = -70
     end
 
+    do   -- share my look with my other add-ons
+        local sb = Box(win, 16, 16)
+        sb:SetPoint("TOPLEFT", win, "TOPLEFT", 16, top)
+        local st = sb:CreateTexture(nil, "OVERLAY")
+        st:SetTexture(WHITE)
+        st:SetVertexColor(GOLD[1], GOLD[2], GOLD[3], 1)
+        st:SetPoint("TOPLEFT", 3, -3) st:SetPoint("BOTTOMRIGHT", -3, 3)
+        local sl2 = Text(win, 11)
+        sl2:SetPoint("LEFT", sb, "RIGHT", 8, 0)
+        sl2:SetText("Sync my look with my other add-ons")
+        local btn2 = CreateFrame("Button", nil, win)
+        btn2:SetPoint("TOPLEFT", sb, "TOPLEFT", -4, 4)
+        btn2:SetPoint("BOTTOMRIGHT", sl2, "BOTTOMRIGHT", 4, -4)
+        local function Draw2() st:SetShown(ShareOn() and true or false) end
+        btn2:SetScript("OnClick", function() ShareToggle() Draw2() end)
+        win.DrawShare = Draw2
+        Draw2()
+        top = top - 24
+    end
+
     win.tabs = {}
     local tabList = {}
     if cfg.options then tabList[#tabList + 1] = { id = "_opts", name = cfg.optionsName or "Options" } end
@@ -1688,7 +1805,7 @@ local function Build()
     hint:SetPoint("BOTTOMRIGHT", -16, 20)
     win.hintTxt = hint
     hint:SetText("Untick \"Use a custom look\" to get the original back.")
-    win:SetScript("OnShow", function() if win.DrawSync then win.DrawSync() end RefreshAll() end)
+    win:SetScript("OnShow", function() if win.DrawSync then win.DrawSync() end if win.DrawShare then win.DrawShare() end RefreshAll() end)
     win:SetScript("OnHide", CloseMenu)
     -- the options/look panel takes the same colors, background, border and fonts as the first window
     local pspec = { id = "_look", name = "Look", strip = "backdrop", noScale = true, title = function() return win.titleFS end }
@@ -1763,6 +1880,12 @@ function Look.Setup(c)
     windows = c.windows or {}
     byId = {}
     for _, spec in ipairs(windows) do byId[spec.id] = spec end
+    Hub.m[tostring(c.title)] = {
+        on = ShareOn,
+        stamp = function() local L = Store() return L and L.shareStamp or 0 end,
+        snap = ShareSnap,
+        take = ShareTake,
+    }
     if c.slash then
         local key = "LOOK" .. tostring(c.title):upper()
         _G["SLASH_" .. key .. "1"] = "/" .. c.slash
@@ -1785,6 +1908,10 @@ function Look.Setup(c)
         for _, spec in ipairs(windows) do
             local fr = spec.global and _G[spec.global]
             if fr then Look.Attach(spec.id, fr) end
+        end
+        -- pick up the newest look any of my other add-ons has
+        if _G.C_Timer and _G.C_Timer.After then
+            _G.C_Timer.After(1.5, function() if ShareOn() then Safe(SharePull) end end)
         end
         -- GreedUI: show up in its add-on list and follow its look
         local G = _G.GreedUI

@@ -1,5 +1,8 @@
 # Guildie
 
+## Unreleased
+- Your custom look is now shared with your other add-ons: change colors, background, border or opacity in one and the rest follow (the newest change wins). It is on by default; untick "Sync my look with my other add-ons" in the Look window to turn it off.
+
 ## v1.15.0
 - Gamer words: the total now covers the times you were offline too. Guildmates share how many were seen in each hour (just an hour and a number: never the words or who said them) and the biggest number for each hour is used. Turn it off with "Share gamer word counts with guildmates" in the settings.
 
