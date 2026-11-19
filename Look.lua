@@ -69,6 +69,10 @@ local PRESETS = {
                  look = { bgStyle = "marble", cornerArt = "filigree", crest = "gem", edgeArt = "beads", banner = "plaque", divider = "flourish", watermark = "shield", edgeFx = "bevel", flair = "royal", depth = 0.4, bgNoTint = false, texScale = 1 } },
     horde    = { name = "Red and iron war camp (art)", bg = { 0.30, 0.09, 0.08 }, edge = { 0.92, 0.28, 0.18 },
                  look = { bgStyle = "leather", cornerArt = "spike", crest = "horns", edgeArt = "spikes", banner = "plaque", divider = "diamond", watermark = "warrior", edgeFx = "bevel", flair = "none", depth = 0.5, bgNoTint = false, texScale = 1 } },
+    violet   = { name = "Violet citadel (art)", bg = { 0.17, 0.09, 0.32 }, edge = { 0.72, 0.50, 1.00 },
+                 look = { bgStyle = "arcane", cornerArt = "arcane", crest = "gem", edgeArt = "runes", banner = "gem", divider = "diamond", watermark = "rings", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    fallen   = { name = "Fallen kingdom (art)", bg = { 0.10, 0.14, 0.24 }, edge = { 0.70, 0.78, 0.92 },
+                 look = { bgStyle = "damask", cornerArt = "plate", crest = "crown", edgeArt = "chain", banner = "scroll", divider = "flourish", watermark = "laurel", edgeFx = "bevel", flair = "gilded", depth = 0.5, bgNoTint = false, texScale = 1 } },
     grove    = { name = "Moonlit grove (art)", bg = { 0.20, 0.12, 0.38 }, edge = { 0.78, 0.68, 1.00 },
                  look = { bgStyle = "arcane", cornerArt = "vine", crest = "crescent", edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "druid", edgeFx = "glow", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
     plague   = { name = "Plaguelands (art)", bg = { 0.16, 0.26, 0.14 }, edge = { 0.64, 0.92, 0.42 },
@@ -96,7 +100,7 @@ local PRESETS = {
 }
 local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "ember", "void", "frost", "mono", "light",
     "arcane", "forge", "glade", "tome", "runestone", "court", "dragon", "oak",
-    "myclass", "alliance", "horde", "grove", "plague",
+    "myclass", "alliance", "horde", "violet", "fallen", "grove", "plague",
     "c_warrior", "c_paladin", "c_hunter", "c_rogue", "c_priest", "c_shaman", "c_mage", "c_warlock", "c_druid" }
 
 local BG_ORDER = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "leather", "stone", "linen", "carbon", "brushed", "gradient",
