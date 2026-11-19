@@ -966,7 +966,10 @@ local function Art2(bg, s, inset, e, spec, frame)
             if c then t:SetTexCoord(c[1], c[2], c[3], c[4]) end
             t:SetVertexColor(1, 1, 1, 1)
         end
-        if wm == "faction" then
+        if wm == "kirintor" then
+            t:SetTexture("Interface\\Icons\\Achievement_Reputation_KirinTor")
+            t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1)
+        elseif wm == "faction" then
             local fg = _G.UnitFactionGroup and _G.UnitFactionGroup("player")
             if fg == "Horde" or fg == "Alliance" then
                 t:SetTexture("Interface\\TargetingFrame\\UI-PVP-" .. fg)
@@ -1603,9 +1606,9 @@ local SECTIONS = {
           names = { none = "None", ribbon = "Ribbon", plaque = "Riveted plaque", scroll = "Scroll", gem = "Jeweled plate" } },
         { key = "divider", kind = "cycle", label = "Divider under the title", values = { "none", "flourish", "beads", "diamond" },
           names = { none = "None", flourish = "Flourish", beads = "Beads", diamond = "Diamonds" } },
-        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "classicon", "specicon", "faction", "compass", "shield", "laurel", "star", "rings",
+        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "classicon", "specicon", "faction", "kirintor", "compass", "shield", "laurel", "star", "rings",
                      "warrior", "paladin", "hunter", "rogue", "priest", "shaman", "mage", "warlock", "druid" },
-          names = { none = "None", mine = "Your class (art)", classicon = "Your class (the game's icon)", specicon = "Your talent tree (the game's icon)", faction = "Your faction (the game's crest)",
+          names = { none = "None", mine = "Your class (art)", classicon = "Your class (the game's icon)", specicon = "Your talent tree (the game's icon)", faction = "Your faction (the game's crest)", kirintor = "Violet city-state (the game's icon)",
                     compass = "Compass rose", shield = "Shield", laurel = "Laurel wreath", star = "Eight-point star", rings = "Runic rings",
                     warrior = "Warrior", paladin = "Paladin", hunter = "Hunter", rogue = "Rogue", priest = "Priest", shaman = "Shaman",
                     mage = "Mage", warlock = "Warlock", druid = "Druid" } },
