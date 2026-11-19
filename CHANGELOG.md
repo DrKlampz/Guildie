@@ -1,11 +1,12 @@
 # Guildie
 
 ## Unreleased
+- Removed the add-on-to-add-on theming hooks and cross-add-on names from the window look code; the shared look sync between your add-ons works the same.
 - Escape now closes the map pin options window instead of opening the game menu.
 - The "Pulse the flair" option now also pulses the edge finish (soft, bevel, double line and glow), not just the corner studs.
 
 ## v1.15.3
-- Look sync: the first time your add-ons meet, they now all take on the same look right away (Baggie's, if it is installed) instead of waiting for you to change something. Baggie no longer shares its title bar color, which means something different there.
+- Look sync: the first time your add-ons meet, they now all take on the same look right away instead of waiting for you to change something.
 
 ## v1.15.2
 - Your custom look is now shared with your other add-ons: change colors, background, border or opacity in one and the rest follow (the newest change wins). It is on by default; untick "Sync my look with my other add-ons" in the Look window to turn it off.

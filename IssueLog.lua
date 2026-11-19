@@ -342,8 +342,7 @@ D.tests[ADDON] = {}
 local function T(name, fn) table.insert(D.tests[ADDON], { name = name, fn = fn }) end
 local function Age(t) if not t or t == 0 then return "never" end return math.floor((time() - t) / 60) .. " min ago" end
 
-local SLASHKEY = { Baggie = "BAGGIE", Guildie = "GUILDIE", Fishie = "FISHIE", Outfitter = "OUTFITTER", Postage = "POSTAGE",
-    Profiteer = "PROFITEER", Vanity = "VANITY", GreedUI = "GREEDUI" }
+local SLASHKEY = { Guildie = "GUILDIE" }
 
 T("saved data is loaded", function() return type(_G[DB_GLOBAL]) == "table" end)
 T("version is set", function() return (version ~= nil and version ~= ""), tostring(version) end)
@@ -368,67 +367,11 @@ T("no blocked actions logged", function()
 end)
 
 local S = {}
-S.Baggie = function()
-    T("bag API answers", function() return C_Container and C_Container.GetContainerNumSlots(0) > 0, "backpack slots: " .. tostring(C_Container and C_Container.GetContainerNumSlots(0)) end)
-    T("slot scan function exists", function() return type(NS.ScanSlots) == "function" end)
-    T("error wrapper returns a function", function() return type(NS.Safe("selftest", function() end)) == "function" end)
-end
 S.Guildie = function()
     T("chat prefill API exists", function() return type(ChatFrame_OpenChat) == "function" end)
     T("guild invite API exists (the game may still block it)", function() return type(GuildInvite) == "function" or (C_GuildInfo and type(C_GuildInfo.Invite) == "function") end)
     T("prefill helper exists", function() return type(NS.PrefillChat) == "function" end)
     T("whisper text readable this session", function() return not NS.warnedSecret, "the game hid a whisper's text from add-ons" end)
     T("in a guild", function() return "info", tostring(IsInGuild and IsInGuild()) end)
-end
-S.Fishie = function()
-    T("cast API exists", function() return type(CastSpellByName) == "function" end)
-    T("error reporter exists", function() return type(NS.ReportError) == "function" end)
-end
-S.Outfitter = function()
-    T("money formatter works", function() local m = NS.Money and NS.Money(12345) return type(m) == "string" and m ~= "", tostring(m) end)
-    T("character key looks right", function() local k = NS.CharKey and NS.CharKey() return type(k) == "string" and k:find("-") ~= nil, tostring(k) end)
-    T("alert starter exists", function() return type(NS.StartAlerts) == "function" end)
-end
-S.Postage = function()
-    T("mailbox state matches the mail window", function()
-        if not (NS.AtMailbox and MailFrame) then return "info", "not available" end
-        local shown = MailFrame:IsShown() and true or false
-        local at = NS.AtMailbox() and true or false
-        if shown == at then return true, "mailbox " .. (shown and "open" or "closed") end
-        return false, "mail window shown=" .. tostring(shown) .. " but Postage says at mailbox=" .. tostring(at)
-    end)
-    T("profession scan exists", function() return type(NS.ScanProfs) == "function" end)
-    T("mail API exists", function() return type(GetInboxNumItems) == "function" or (C_Mail ~= nil) end)
-end
-S.Profiteer = function()
-    local function db() return NS.db or {} end
-    T("full-scan API present", function() return C_AuctionHouse and C_AuctionHouse.ReplicateItems ~= nil and C_AuctionHouse.GetNumReplicateItems ~= nil end)
-    T("post API present (the game may still block add-on calls)", function() return "info", "PostItem=" .. tostring(C_AuctionHouse and C_AuctionHouse.PostItem ~= nil) .. " PostCommodity=" .. tostring(C_AuctionHouse and C_AuctionHouse.PostCommodity ~= nil) end)
-    T("price data stored", function()
-        local n = 0 for _ in pairs(db().prices or {}) do n = n + 1 end
-        return n > 0, n .. " items with prices"
-    end)
-    T("history functions present", function() return NS.History ~= nil and type(NS.History.Record) == "function" and type(NS.History.RecordLite) == "function" end)
-    T("scan-all history is on", function() return (db().settings or {}).scanAll ~= false end)
-    T("last completed scan", function() return "info", Age(db().lastScan) end)
-    T("last scan request / server reply", function()
-        local a = db().lastAbort
-        return "info", "requested " .. Age(db().lastReplicate) .. ", server replied " .. Age(db().lastReplyAt) .. (a and (", last stop: " .. tostring(a.reason)) or "")
-    end)
-    T("next full scan allowed in", function()
-        local last = math.max(db().lastScan or 0, db().lastReplicate or 0)
-        local left = 900 - (time() - last)
-        return "info", left > 0 and (math.ceil(left / 60) .. " min") or "now"
-    end)
-end
-S.Vanity = function()
-    T("hook registration exists", function() return type(NS.AddHook) == "function" end)
-    T("error reporter exists", function() return type(NS.ReportError) == "function" end)
-    T("model frame type available", function() return CreateFrame("PlayerModel") ~= nil end)
-end
-S.GreedUI = function()
-    T("safe runner works", function() return NS.Safe("selftest", function() end) == true end)
-    T("after-combat queue exists", function() return type(NS.AfterCombat) == "function" end)
-    T("error list present", function() return type(NS.errors) == "table", (NS.errors and #NS.errors or 0) .. " kept" end)
 end
 if S[ADDON] then S[ADDON]() end

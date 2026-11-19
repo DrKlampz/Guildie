@@ -56,40 +56,7 @@ local BG_ORDER = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "l
 local BG_NAMES = { solid = "Solid color", dark = "Dark panel", parchment = "Parchment", marble = "Marble", rock = "Rock",
     tooltip = "Tooltip", leather = "Leather", stone = "Stone", linen = "Linen", carbon = "Carbon fiber",
     brushed = "Brushed metal", gradient = "Fade, light to dark", custom = "Custom (path below)" }
--- GreedUI's own textures: offered (and used) only while GreedUI is installed
-local GREED_TEX = {
-    { "g_blackstone", "Black stone (GreedUI)", "Tex_BlackStone", 256 },
-    { "g_slate", "Slate (GreedUI)", "Tex_Slate", 256 },
-    { "g_obsidian", "Obsidian (GreedUI)", "Tex_Obsidian", 256 },
-    { "g_marble", "Dark marble (GreedUI)", "Tex_DarkMarble", 256 },
-    { "g_hammered", "Hammered metal (GreedUI)", "Tex_Hammered", 256 },
-    { "g_weave", "Woven cloth (GreedUI)", "Tex_Weave", 256 },
-    { "g_flecks", "Black with gold flecks (GreedUI)", "Tex_GoldFlecks", 256 },
-    { "g_pitch", "Pitch black (GreedUI)", "Tex_Pitch", 256 },
-    { "g_carbon", "Dark carbon (GreedUI)", "Tex_Carbon", 256 },
-    { "g_leather", "Black leather (GreedUI)", "Tex_Leather", 256 },
-    { "g_midnight", "Midnight blue (GreedUI)", "Tex_Midnight", 256 },
-    { "g_wine", "Wine red (GreedUI)", "Tex_Wine", 256 },
-    { "g_pine", "Deep pine (GreedUI)", "Tex_Pine", 256 },
-    { "g_parchment", "Bright parchment (GreedUI)", "Tex_Parchment", 256 },
-    { "g_ivory", "Ivory marble (GreedUI)", "Tex_Ivory", 256 },
-    { "g_steel", "Bright steel (GreedUI)", "Tex_Steel", 256 },
-    { "g_sand", "Sandstone (GreedUI)", "Tex_Sandstone", 256 },
-    { "g_frost", "Frost white (GreedUI)", "Tex_Frost", 256 },
-    { "g_goldleaf", "Gold leaf (GreedUI)", "Tex_GoldLeaf", 256 },
-    { "g_bronze", "Bronze (GreedUI)", "Tex_Bronze", 256 },
-}
-local greedAdded = false
-local function EnsureGreedStyles()
-    if greedAdded or not _G.GreedUI then return end
-    greedAdded = true
-    for _, g in ipairs(GREED_TEX) do
-        BG_ORDER[#BG_ORDER + 1] = g[1]
-        BG_NAMES[g[1]] = g[2]
-    end
-end
 local function BgStyles()
-    EnsureGreedStyles()
     local m = (cfg and cfg.media) or ""
     local out = {
         solid     = { WHITE, false, 0 },
@@ -105,7 +72,6 @@ local function BgStyles()
         brushed   = { m .. "Tex_Brushed", true, 128 },
         gradient  = { m .. "Tex_Gradient", false, 0 },
     }
-    for _, g in ipairs(GREED_TEX) do out[g[1]] = { "Interface\\AddOns\\GreedUI\\Media\\" .. g[3], true, g[4] } end
     return out
 end
 -- fonts: the game's own, the pack bundled in this add-on's Fonts folder, and any SharedMedia fonts
@@ -351,45 +317,17 @@ local function Own(id)
     if e and e.defaults then for k, v in pairs(e.defaults) do if w[k] == nil then w[k] = Copy(v) end end end
     return w
 end
--- GreedUI (when it is installed and "dress my add-ons" is on) overlays appearance only;
--- the add-on's saved enabled state, per-window settings and profiles remain authoritative.
 -- brighter by a factor, with a floor lift so a pure black panel still gets visibly lighter buttons
 local function Shade(c, f) local k = f > 1 and (f - 1) * 0.03 or 0 return { math.min(1, c[1] * f + k), math.min(1, c[2] * f + k), math.min(1, c[3] * f + k) } end
-local function GreedOverlay(w)
-    if w and w.follow == false then return w end   -- this window keeps its own look
-    local G = _G.GreedUI
-    local t = G and G.GetTheme and G.GetTheme(cfg and cfg.title)
-    if not (t and w) then return w end
-    local o = Copy(w)
-    o.bgColor, o.alpha = Copy(t.bg), math.max(0.2, tonumber(t.bgAlpha) or 0.92)
-    o.bgBright, o.stoneAlpha = tonumber(t.bgBright) or 1, tonumber(t.stoneAlpha) or 0.45
-    o.paper, o.paperColor, o.paperAlpha = t.paper, t.paperColor, t.paperAlpha
-    o.edgeColor, o.titleColor, o.edgeAlpha = Copy(t.accent), Copy(t.accent), 1
-    o.bgStyle, o.edgeStyle, o.edgeSize = t.bgStyle or "solid", t.edgeStyle or "line", tonumber(t.borderSize) or 1
-    o.bgNoTint = t.bgNoTint ~= false
-    o.edgeAlpha = tonumber(t.edgeAlpha) or 1
-    -- GreedUI sets the text size, unless this window has its own (picked in the add-on's own options or the Text section)
-    if t.fontScale and not (w.fontOwn or (tonumber(w.fontScale) or 1) ~= 1) then o.fontScale = tonumber(t.fontScale) or 1 end
-    if t.outline ~= nil then o.outline = t.outline and true or false end
-    o.buttons, o.btnBgStyle = true, "solid"
-    o.btnGloss, o.btnAlpha = t.btnGloss and true or false, tonumber(t.btnAlpha) or 1
-    local shade = tonumber(t.btnShade) or 2.6
-    o.btnColor, o.btnHover = Shade(t.bg, shade), Shade(t.bg, shade * 1.6)
-    o.btnEdgeStyle, o.btnEdgeColor, o.btnEdgeSize = "line", Copy(t.accent), 1
-    o.btnTextColor = Shade(t.accent, 1.05)
-    if t.font then FONT_PATH["greedui"] = t.font o.font = "greedui" end
-    o.greedStone, o.greedInlay = t.stone, t.inlay
-    return o
-end
 local function Eff(id)
     local L = Store()
     if not L then return nil end
     if id == "_look" then   -- this panel wears the first window's look
-        if windows[1] then return GreedOverlay(Own(windows[1].id)) end
-        return GreedOverlay(Defaults())
+        if windows[1] then return Own(windows[1].id) end
+        return Defaults()
     end
-    if L.sync and windows[1] then return GreedOverlay(Own(windows[1].id)) end
-    return GreedOverlay(Own(id))
+    if L.sync and windows[1] then return Own(windows[1].id) end
+    return Own(id)
 end
 
 ----------------------------------------------------------------------
@@ -812,12 +750,6 @@ local function ApplyOne(spec)
         bg:SetBackdropBorderColor(e[1], e[2], e[3], tonumber(s.edgeAlpha) or 0.95)
         Safe(Fx, bg, s, inset, e)
         bg:Show()
-        do   -- black stone with gold inlay, when GreedUI hands it over
-            local GU = _G.GreedUI
-            if GU and GU.Inlay and (s.greedStone or s.greedInlay) then
-                GU.Inlay(bg, { inset = inset + 3, studs = s.greedInlay and true or false, stoneAlpha = s.greedStone and (tonumber(s.stoneAlpha) or 0.45) or 0, lineAlpha = s.greedInlay and 0.5 or 0 })
-            elseif GU and GU.InlayOff and bg.greedInlay then GU.InlayOff(bg) end
-        end
         -- a header bar behind the title (replaces the game's own strip)
         local hd = bg.lookHeader
         if s.header then
@@ -856,7 +788,7 @@ local function ApplyOne(spec)
             if not frame.lookScale then frame.lookScale = frame:GetScale() or 1 end
             frame:SetScale(math.max(0.4, math.min(2, tonumber(s.scale) or 1)))
         end
-        if not spec.noAlpha then   -- a window that fades itself (Baggie in combat) keeps control of its own alpha
+        if not spec.noAlpha then   -- a window that fades itself (a window that fades in combat) keeps control of its own alpha
             if not frame.lookAlpha then frame.lookAlpha = frame:GetAlpha() or 1 end
             frame:SetAlpha(math.max(0.1, math.min(1, tonumber(s.frameAlpha) or 1)))
         end
@@ -867,7 +799,6 @@ local function ApplyOne(spec)
     else
         if bg then bg:Hide() end
         if bg and bg.lookFx then for _, t in ipairs(bg.lookFx.t) do t:Hide() end end
-        if bg and bg.greedInlay and _G.GreedUI and _G.GreedUI.InlayOff then _G.GreedUI.InlayOff(bg) end
         Safe(Strip, frame, spec, false)
         if frame.lookScale then frame:SetScale(frame.lookScale) frame.lookScale = nil end
         if frame.lookAlpha then frame:SetAlpha(frame.lookAlpha) frame.lookAlpha = nil end
@@ -883,10 +814,10 @@ local function ApplyOne(spec)
     end
 end
 
--- share my look with my other add-ons (the newest change wins; one shared hub in _G.GreedLookShare)
+-- share my look with my other add-ons (the newest change wins; one shared hub in _G.AddonLookShare)
 local SHARE_SKIP = { follow = true, lock = true, scale = true, defOn = true }
-local Hub = _G.GreedLookShare
-if not Hub then Hub = { m = {} } _G.GreedLookShare = Hub end
+local Hub = _G.AddonLookShare
+if not Hub then Hub = { m = {} } _G.AddonLookShare = Hub end
 local sharing = false
 local function ShareOn() local L = Store() return L and L.shareOn ~= false end
 local function ShareSnap()
@@ -985,7 +916,7 @@ local function ShareElect()
     end
     if #names < 2 then return end
     table.sort(names)
-    local lead = (Hub.m.Baggie and Hub.m.Baggie.on() and "Baggie") or names[1]
+    local lead = names[1]
     local stamp = (_G.time and _G.time()) or 1
     local m = Hub.m[lead]
     local snap = m.snap()
@@ -1320,7 +1251,6 @@ local FONT_NAMES = FONTS
 local SECTIONS = {
     { id = "use", title = "This window", rows = {
         { key = "enabled", kind = "check", label = "Use a custom look for this window" },
-        { key = "follow", kind = "check", label = "Follow GreedUI's look (untick to use this window's own colors and opacity)" },
         { key = "scale", kind = "slider", label = "Window size (scale)", min = 0.5, max = 1.8, step = 0.05, fmt = "%.2f" },
         { key = "frameAlpha", kind = "slider", label = "See-through (whole window)", min = 0.2, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "lock", kind = "check", label = "Lock the window in place" },
@@ -1910,8 +1840,8 @@ function Look.Toggle()
     if win and win:IsShown() then win:Hide() else Look.Open() end
 end
 
--- cfg: { title = "Guildie", db = function() return GuildieDB end, media = "Interface\\AddOns\\Guildie\\Media\\",
---        slash = "guildielook", windows = { { id, name, global, strip = "template"|"backdrop"|nil, title = function(frame) -> FontString,
+-- cfg: { title = "MyAddon", db = function() return MyAddonDB end, media = "Interface\\AddOns\\MyAddon\\Media\\",
+--        slash = "myaddonlook", windows = { { id, name, global, strip = "template"|"backdrop"|nil, title = function(frame) -> FontString,
 --        hide = { "keys of child objects to hide" }, pad = 0, noScale = true } } }
 function Look.Setup(c)
     cfg = c
@@ -1952,12 +1882,6 @@ function Look.Setup(c)
         -- pick up the newest look any of my other add-ons has
         if _G.C_Timer and _G.C_Timer.After then
             _G.C_Timer.After(1.5, function() if ShareOn() then Safe(ShareElect) Safe(SharePull) end end)
-        end
-        -- GreedUI: show up in its add-on list and follow its look
-        local G = _G.GreedUI
-        if G and G.RegisterPlugin and cfg and cfg.title ~= "GreedUI" then
-            G.RegisterPlugin(cfg.title, { open = function() Look.Open() end, refresh = function() ApplyAll() end, ext = cfg.ext })
-            G.OnTheme(function() ApplyAll() end)
         end
     end)
 end
