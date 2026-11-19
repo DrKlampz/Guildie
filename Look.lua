@@ -955,6 +955,34 @@ local function ShareCheck()
     L.shareStamp = (_G.time and _G.time()) or 1
     if ShareOn() then SharePush(snap, L.shareStamp) end
 end
+local function ShareSeed(stamp)
+    local L = Store()
+    local snap = ShareSnap()
+    if not (L and snap) then return end
+    L.shareSig = ShareSig(snap)
+    L.shareStamp = stamp
+end
+-- the very first time (nobody has shared yet): one add-on's look becomes the starting point for all of them
+local function ShareElect()
+    if Hub.elected then return end
+    Hub.elected = true
+    local names = {}
+    for name, m in pairs(Hub.m) do
+        if m.on() then
+            if m.stamp() > 0 then return end
+            names[#names + 1] = name
+        end
+    end
+    if #names < 2 then return end
+    table.sort(names)
+    local lead = (Hub.m.Baggie and Hub.m.Baggie.on() and "Baggie") or names[1]
+    local stamp = (_G.time and _G.time()) or 1
+    local m = Hub.m[lead]
+    local snap = m.snap()
+    if not snap then return end
+    m.seed(stamp)
+    SharePush(snap, stamp)
+end
 local function ShareToggle()
     local L = Store()
     if not L then return end
@@ -1886,6 +1914,7 @@ function Look.Setup(c)
         stamp = function() local L = Store() return L and L.shareStamp or 0 end,
         snap = ShareSnap,
         take = ShareTake,
+        seed = ShareSeed,
     }
     if c.slash then
         local key = "LOOK" .. tostring(c.title):upper()
@@ -1912,7 +1941,7 @@ function Look.Setup(c)
         end
         -- pick up the newest look any of my other add-ons has
         if _G.C_Timer and _G.C_Timer.After then
-            _G.C_Timer.After(1.5, function() if ShareOn() then Safe(SharePull) end end)
+            _G.C_Timer.After(1.5, function() if ShareOn() then Safe(ShareElect) Safe(SharePull) end end)
         end
         -- GreedUI: show up in its add-on list and follow its look
         local G = _G.GreedUI
