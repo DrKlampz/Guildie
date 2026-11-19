@@ -49,13 +49,34 @@ local PRESETS = {
     frost    = { name = "Frost",           bg = { 0.05, 0.09, 0.12 }, edge = { 0.55, 0.88, 0.98 } },
     mono     = { name = "Black and white", bg = { 0.00, 0.00, 0.00 }, edge = { 0.95, 0.95, 0.95 } },
     light    = { name = "Parchment",       bg = { 0.85, 0.82, 0.75 }, edge = { 0.45, 0.35, 0.20 } },
+    -- themes with artwork: a texture, corner pieces and a crest come with the colors
+    arcane   = { name = "Arcane library (art)", bg = { 0.14, 0.15, 0.38 }, edge = { 0.60, 0.68, 1.00 },
+                 look = { bgStyle = "arcane", cornerArt = "arcane", crest = "gem", edgeFx = "glow", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    forge    = { name = "Dwarven forge (art)",  bg = { 0.42, 0.30, 0.24 }, edge = { 0.95, 0.58, 0.22 },
+                 look = { bgStyle = "plate", cornerArt = "plate", crest = "none", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    glade    = { name = "Elven glade (art)",    bg = { 0.20, 0.38, 0.22 }, edge = { 0.70, 0.92, 0.45 },
+                 look = { bgStyle = "damask", cornerArt = "vine", crest = "scroll", edgeFx = "soft", flair = "gilded", depth = 0.35, bgNoTint = false, texScale = 1 } },
+    tome     = { name = "Old tome (art)",       bg = { 0.86, 0.74, 0.52 }, edge = { 0.40, 0.24, 0.10 },
+                 look = { bgStyle = "paper", cornerArt = "filigree", crest = "scroll", edgeFx = "soft", flair = "gilded", depth = 0.3, bgNoTint = false, texScale = 1 } },
+    runestone = { name = "Runestone (art)",     bg = { 0.30, 0.36, 0.42 }, edge = { 0.55, 0.88, 0.98 },
+                 look = { bgStyle = "runes", cornerArt = "rune", crest = "none", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    court    = { name = "Royal court (art)",    bg = { 0.55, 0.12, 0.18 }, edge = { 0.96, 0.80, 0.36 },
+                 look = { bgStyle = "damask", cornerArt = "filigree", crest = "crown", edgeFx = "double", flair = "royal", depth = 0.35, bgNoTint = false, texScale = 1 } },
+    dragon   = { name = "Dragonscale (art)",    bg = { 0.10, 0.36, 0.30 }, edge = { 0.45, 0.98, 0.72 },
+                 look = { bgStyle = "scales", cornerArt = "plate", crest = "wings", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1.2 } },
+    oak      = { name = "Oak lodge (art)",      bg = { 0.52, 0.36, 0.22 }, edge = { 0.88, 0.70, 0.36 },
+                 look = { bgStyle = "wood", cornerArt = "filigree", crest = "none", edgeFx = "bevel", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
 }
-local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "ember", "void", "frost", "mono", "light" }
+local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "ember", "void", "frost", "mono", "light",
+    "arcane", "forge", "glade", "tome", "runestone", "court", "dragon", "oak" }
 
-local BG_ORDER = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "leather", "stone", "linen", "carbon", "brushed", "gradient", "custom" }
+local BG_ORDER = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "leather", "stone", "linen", "carbon", "brushed", "gradient",
+    "wood", "paper", "arcane", "runes", "plate", "damask", "scales", "custom" }
 local BG_NAMES = { solid = "Solid color", dark = "Dark panel", parchment = "Parchment", marble = "Marble", rock = "Rock",
     tooltip = "Tooltip", leather = "Leather", stone = "Stone", linen = "Linen", carbon = "Carbon fiber",
-    brushed = "Brushed metal", gradient = "Fade, light to dark", custom = "Custom (path below)" }
+    brushed = "Brushed metal", gradient = "Fade, light to dark", custom = "Custom (path below)",
+    wood = "Wood planks", paper = "Aged paper", arcane = "Arcane starfield", runes = "Runed slate", plate = "Riveted iron",
+    damask = "Damask tapestry", scales = "Dragon scales" }
 local function BgStyles()
     local m = (cfg and cfg.media) or ""
     local out = {
@@ -71,6 +92,13 @@ local function BgStyles()
         carbon    = { m .. "Tex_Carbon", true, 64 },
         brushed   = { m .. "Tex_Brushed", true, 128 },
         gradient  = { m .. "Tex_Gradient", false, 0 },
+        wood      = { m .. "Tex_Wood", true, 256 },
+        paper     = { m .. "Tex_Paper", true, 256 },
+        arcane    = { m .. "Tex_Arcane", true, 256 },
+        runes     = { m .. "Tex_Runes", true, 256 },
+        plate     = { m .. "Tex_Plate", true, 256 },
+        damask    = { m .. "Tex_Damask", true, 256 },
+        scales    = { m .. "Tex_Scales", true, 256 },
     }
     return out
 end
@@ -255,6 +283,7 @@ local function Defaults()
         btnAlpha = 1, btnEdgeStyle = "line", btnEdgeColor = { 0.88, 0.69, 0.29 }, btnEdgeSize = 1,
         btnTextColor = { 1, 0.82, 0.2 }, btnGloss = false, btnNoTint = false,
         follow = true, edgeFx = "none", depth = 0, topLight = 0, texScale = 1, flair = "gilded", pulse = false,
+        cornerArt = "none", crest = "none", artSize = 40,
     }
 end
 
@@ -677,6 +706,40 @@ local function Fx(bg, s, inset, e)
             if st.SetRotation then st:SetRotation(flair == "royal" and math.rad(45) or 0) end
             st:Show()
         end
+    end
+    -- artwork: carved corner pieces and a crest on the top edge, tinted with the border color (all optional)
+    fx.art = fx.art or {}
+    for _, t in ipairs(fx.art) do t:Hide() end
+    local mediaDir = (cfg and cfg.media) or ""
+    local sz = math.max(16, math.min(96, tonumber(s.artSize) or 40))
+    local corner = s.cornerArt or "none"
+    if corner ~= "none" then
+        local o = i0 + 1
+        local spots = { { "TOPLEFT", o, -o, 0, 1, 0, 1 }, { "TOPRIGHT", -o, -o, 1, 0, 0, 1 },
+                        { "BOTTOMLEFT", o, o, 0, 1, 1, 0 }, { "BOTTOMRIGHT", -o, o, 1, 0, 1, 0 } }
+        for k, c in ipairs(spots) do
+            local t = fx.art[k]
+            if not t then t = bg:CreateTexture(nil, "OVERLAY", nil, 3) fx.art[k] = t end
+            t:ClearAllPoints()
+            t:SetTexture(mediaDir .. "Art_Corner_" .. corner)
+            t:SetTexCoord(c[4], c[5], c[6], c[7])
+            t:SetPoint(c[1], bg, c[1], c[2], c[3])
+            t:SetSize(sz, sz)
+            t:SetVertexColor(e[1], e[2], e[3], 1)
+            t:Show()
+        end
+    end
+    local crest = s.crest or "none"
+    if crest ~= "none" then
+        local t = fx.art[5]
+        if not t then t = bg:CreateTexture(nil, "OVERLAY", nil, 4) fx.art[5] = t end
+        t:ClearAllPoints()
+        t:SetTexture(mediaDir .. "Art_Crest_" .. crest)
+        t:SetTexCoord(0, 1, 0, 1)
+        t:SetPoint("CENTER", bg, "TOP", 0, 1)
+        t:SetSize(sz * 3.2, sz * 0.8)
+        t:SetVertexColor(e[1], e[2], e[3], 1)
+        t:Show()
     end
     -- optional slow pulse of the studs and the edge finish
     if not fx.pulser then
@@ -1280,6 +1343,11 @@ local SECTIONS = {
           names = { none = "Plain", soft = "Soft (inner shadow and faint glow)", bevel = "Bevel (raised)", double = "Double line", glow = "Glow" } },
         { key = "flair", kind = "cycle", label = "Flair (gold trim)", values = { "none", "gilded", "royal" },
           names = { none = "None", gilded = "Gilded line and studs", royal = "Royal: double line and diamond corners" } },
+        { key = "cornerArt", kind = "cycle", label = "Corner artwork", values = { "none", "filigree", "vine", "rune", "plate", "arcane" },
+          names = { none = "None", filigree = "Gilded filigree", vine = "Vines and leaves", rune = "Carved runes", plate = "Iron corner plates", arcane = "Arcane sigil" } },
+        { key = "crest", kind = "cycle", label = "Crest on the top edge", values = { "none", "wings", "gem", "scroll", "crown" },
+          names = { none = "None", wings = "Winged", gem = "Jeweled", scroll = "Scrollwork", crown = "Crown" } },
+        { key = "artSize", kind = "slider", label = "Artwork size", min = 16, max = 96, step = 2 },
         { key = "pulse", kind = "check", label = "Pulse the flair and the edge finish" },
         { key = "edgeSize", kind = "slider", label = "Line thickness", min = 1, max = 8, step = 1 },
         { key = "header", kind = "check", label = "Header bar behind the title" },
@@ -1418,6 +1486,7 @@ local function MakeRow(parent, id, row, isExtra)
                     local p = PRESETS[v]
                     t.preset = v
                     t.bgColor, t.edgeColor, t.titleColor = Copy(p.bg), Copy(p.edge), Copy(p.edge)
+                    if p.look then for lk, lv in pairs(p.look) do t[lk] = lv end end
                 else
                     t[row.key] = v
                 end
