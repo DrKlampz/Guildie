@@ -64,11 +64,40 @@ local PRESETS = {
                  look = { edgeArt = "beads", banner = "none", divider = "flourish", watermark = "laurel", bgStyle = "damask", cornerArt = "filigree", crest = "crown", edgeFx = "double", flair = "royal", depth = 0.35, bgNoTint = false, texScale = 1 } },
     dragon   = { name = "Dragonscale (art)",    bg = { 0.10, 0.36, 0.30 }, edge = { 0.45, 0.98, 0.72 },
                  look = { edgeArt = "chain", banner = "gem", divider = "diamond", watermark = "star", bgStyle = "scales", cornerArt = "plate", crest = "wings", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1.2 } },
+    myclass  = { name = "My class (automatic art)", bg = { 0.05, 0.05, 0.07 }, edge = { 0.88, 0.69, 0.29 }, dyn = true },
+    alliance = { name = "Blue and gold kingdom (art)", bg = { 0.12, 0.20, 0.45 }, edge = { 0.96, 0.82, 0.38 },
+                 look = { bgStyle = "marble", cornerArt = "filigree", crest = "gem", edgeArt = "beads", banner = "plaque", divider = "flourish", watermark = "shield", edgeFx = "bevel", flair = "royal", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    horde    = { name = "Red and iron war camp (art)", bg = { 0.30, 0.09, 0.08 }, edge = { 0.92, 0.28, 0.18 },
+                 look = { bgStyle = "leather", cornerArt = "spike", crest = "horns", edgeArt = "spikes", banner = "plaque", divider = "diamond", watermark = "warrior", edgeFx = "bevel", flair = "none", depth = 0.5, bgNoTint = false, texScale = 1 } },
+    grove    = { name = "Moonlit grove (art)", bg = { 0.20, 0.12, 0.38 }, edge = { 0.78, 0.68, 1.00 },
+                 look = { bgStyle = "arcane", cornerArt = "vine", crest = "crescent", edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "druid", edgeFx = "glow", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    plague   = { name = "Plaguelands (art)", bg = { 0.16, 0.26, 0.14 }, edge = { 0.64, 0.92, 0.42 },
+                 look = { bgStyle = "runes", cornerArt = "rune", crest = "skull", edgeArt = "chain", banner = "plaque", divider = "diamond", watermark = "warlock", edgeFx = "soft", flair = "none", depth = 0.5, bgNoTint = false, texScale = 1 } },
+    c_warrior = { name = "Warrior (class art)", bg = { 0.3, 0.23, 0.16 }, edge = { 0.78, 0.61, 0.43 }, class = "WARRIOR",
+        look = { bgStyle = "plate", cornerArt = "plate", crest = "none", edgeArt = "chain", banner = "plaque", divider = "beads", watermark = "warrior", edgeFx = "bevel", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    c_paladin = { name = "Paladin (class art)", bg = { 0.36, 0.21, 0.28 }, edge = { 0.96, 0.55, 0.73 }, class = "PALADIN",
+        look = { bgStyle = "marble", cornerArt = "filigree", crest = "crown", edgeArt = "beads", banner = "ribbon", divider = "flourish", watermark = "paladin", edgeFx = "soft", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    c_hunter = { name = "Hunter (class art)", bg = { 0.25, 0.32, 0.17 }, edge = { 0.67, 0.83, 0.45 }, class = "HUNTER",
+        look = { bgStyle = "wood", cornerArt = "vine", crest = "none", edgeArt = "rope", banner = "plaque", divider = "beads", watermark = "hunter", edgeFx = "bevel", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    c_rogue = { name = "Rogue (class art)", bg = { 0.38, 0.36, 0.16 }, edge = { 1.0, 0.96, 0.41 }, class = "ROGUE",
+        look = { bgStyle = "leather", cornerArt = "rune", crest = "none", edgeArt = "chain", banner = "plaque", divider = "diamond", watermark = "rogue", edgeFx = "soft", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    c_priest = { name = "Priest (class art)", bg = { 0.36, 0.36, 0.38 }, edge = { 0.95, 0.95, 1.0 }, class = "PRIEST",
+        look = { bgStyle = "marble", cornerArt = "filigree", crest = "gem", edgeArt = "beads", banner = "ribbon", divider = "flourish", watermark = "priest", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    c_shaman = { name = "Shaman (class art)", bg = { 0.04, 0.19, 0.36 }, edge = { 0.1, 0.5, 0.95 }, class = "SHAMAN",
+        look = { bgStyle = "runes", cornerArt = "rune", crest = "wings", edgeArt = "runes", banner = "plaque", divider = "diamond", watermark = "shaman", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    c_mage = { name = "Mage (class art)", bg = { 0.11, 0.3, 0.36 }, edge = { 0.3, 0.78, 0.95 }, class = "MAGE",
+        look = { bgStyle = "arcane", cornerArt = "arcane", crest = "gem", edgeArt = "runes", banner = "gem", divider = "diamond", watermark = "mage", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    c_warlock = { name = "Warlock (class art)", bg = { 0.23, 0.21, 0.36 }, edge = { 0.6, 0.55, 0.95 }, class = "WARLOCK",
+        look = { bgStyle = "runes", cornerArt = "rune", crest = "horns", edgeArt = "chain", banner = "gem", divider = "diamond", watermark = "warlock", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+    c_druid = { name = "Druid (class art)", bg = { 0.38, 0.2, 0.04 }, edge = { 1.0, 0.52, 0.1 }, class = "DRUID",
+        look = { bgStyle = "wood", cornerArt = "vine", crest = "crescent", edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "druid", edgeFx = "soft", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
     oak      = { name = "Oak lodge (art)",      bg = { 0.52, 0.36, 0.22 }, edge = { 0.88, 0.70, 0.36 },
                  look = { edgeArt = "rope", banner = "plaque", divider = "beads", watermark = "compass", bgStyle = "wood", cornerArt = "filigree", crest = "none", edgeFx = "bevel", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
 }
 local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "ember", "void", "frost", "mono", "light",
-    "arcane", "forge", "glade", "tome", "runestone", "court", "dragon", "oak" }
+    "arcane", "forge", "glade", "tome", "runestone", "court", "dragon", "oak",
+    "myclass", "alliance", "horde", "grove", "plague",
+    "c_warrior", "c_paladin", "c_hunter", "c_rogue", "c_priest", "c_shaman", "c_mage", "c_warlock", "c_druid" }
 
 local BG_ORDER = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "leather", "stone", "linen", "carbon", "brushed", "gradient",
     "wood", "paper", "arcane", "runes", "plate", "damask", "scales", "custom" }
@@ -851,7 +880,32 @@ local function Art2(bg, s, inset, e, spec, frame)
     local wm = s.watermark or "none"
     if wm ~= "none" then
         local t = Tex("wm", "BACKGROUND", 5)
-        t:SetTexture(m .. "Art_Mark_" .. wm)
+        local tok
+        if UnitClass then local _, tk = UnitClass("player") tok = tk end
+        tok = tostring(tok or ""):lower()
+        local function ClassIcon()
+            t:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CharacterCreate-Classes")
+            local c = _G.CLASS_ICON_TCOORDS and _G.CLASS_ICON_TCOORDS[tok:upper()]
+            if c then t:SetTexCoord(c[1], c[2], c[3], c[4]) end
+            t:SetVertexColor(1, 1, 1, 1)
+        end
+        if wm == "classicon" then
+            ClassIcon()
+        elseif wm == "specicon" then
+            local icon, best = nil, -1
+            for i = 1, (_G.GetNumTalentTabs and _G.GetNumTalentTabs() or 0) do
+                local r = { pcall(_G.GetTalentTabInfo, i) }
+                if r[1] then
+                    local ic, pts
+                    if type(r[2]) == "number" then ic, pts = r[5], r[6] else ic, pts = r[3], r[4] end
+                    pts = tonumber(pts) or 0
+                    if ic and pts > best then best, icon = pts, ic end
+                end
+            end
+            if icon then t:SetTexture(icon) t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1) else ClassIcon() end
+        else
+            t:SetTexture(m .. "Art_Mark_" .. (wm == "mine" and (tok ~= "" and tok or "star") or wm))
+        end
         local function Fit()
             local w, h = bg:GetWidth() or 0, bg:GetHeight() or 0
             local side = math.max(48, math.min(w > 0 and w or 240, h > 0 and h or 240) * 0.62)
@@ -1455,19 +1509,23 @@ local SECTIONS = {
         { key = "headerSize", kind = "slider", label = "Header bar height", min = 16, max = 44, step = 1 },
     } },
     { id = "art", title = "Artwork (all optional)", rows = {
-        { key = "edgeArt", kind = "cycle", label = "Ornament along the edges", values = { "none", "rope", "chain", "beads", "runes", "vine" },
-          names = { none = "None", rope = "Twisted rope", chain = "Iron chain", beads = "Pearl beads", runes = "Carved runes", vine = "Creeping vine" } },
+        { key = "edgeArt", kind = "cycle", label = "Ornament along the edges", values = { "none", "rope", "chain", "beads", "runes", "vine", "spikes" },
+          names = { none = "None", rope = "Twisted rope", chain = "Iron chain", beads = "Pearl beads", runes = "Carved runes", vine = "Creeping vine", spikes = "Iron spikes" } },
         { key = "artEdge", kind = "slider", label = "Edge ornament thickness", min = 6, max = 24, step = 1 },
-        { key = "cornerArt", kind = "cycle", label = "Corner pieces", values = { "none", "filigree", "vine", "rune", "plate", "arcane" },
-          names = { none = "None", filigree = "Gilded filigree", vine = "Vines and leaves", rune = "Carved runes", plate = "Iron corner plates", arcane = "Arcane sigil" } },
-        { key = "crest", kind = "cycle", label = "Crest above the top edge", values = { "none", "wings", "gem", "scroll", "crown" },
-          names = { none = "None", wings = "Winged", gem = "Jeweled", scroll = "Scrollwork", crown = "Crown" } },
+        { key = "cornerArt", kind = "cycle", label = "Corner pieces", values = { "none", "filigree", "vine", "rune", "plate", "arcane", "spike" },
+          names = { none = "None", filigree = "Gilded filigree", vine = "Vines and leaves", rune = "Carved runes", plate = "Iron corner plates", arcane = "Arcane sigil", spike = "Spiked iron" } },
+        { key = "crest", kind = "cycle", label = "Crest above the top edge", values = { "none", "wings", "gem", "scroll", "crown", "horns", "crescent", "skull" },
+          names = { none = "None", wings = "Winged", gem = "Jeweled", scroll = "Scrollwork", crown = "Crown", horns = "Horns", crescent = "Crescent moon", skull = "Skull" } },
         { key = "banner", kind = "cycle", label = "Banner behind the title", values = { "none", "ribbon", "plaque", "scroll", "gem" },
           names = { none = "None", ribbon = "Ribbon", plaque = "Riveted plaque", scroll = "Scroll", gem = "Jeweled plate" } },
         { key = "divider", kind = "cycle", label = "Divider under the title", values = { "none", "flourish", "beads", "diamond" },
           names = { none = "None", flourish = "Flourish", beads = "Beads", diamond = "Diamonds" } },
-        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "compass", "shield", "laurel", "star", "rings" },
-          names = { none = "None", compass = "Compass rose", shield = "Shield", laurel = "Laurel wreath", star = "Eight-point star", rings = "Runic rings" } },
+        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "classicon", "specicon", "compass", "shield", "laurel", "star", "rings",
+                     "warrior", "paladin", "hunter", "rogue", "priest", "shaman", "mage", "warlock", "druid" },
+          names = { none = "None", mine = "Your class (art)", classicon = "Your class (the game's icon)", specicon = "Your talent tree (the game's icon)",
+                    compass = "Compass rose", shield = "Shield", laurel = "Laurel wreath", star = "Eight-point star", rings = "Runic rings",
+                    warrior = "Warrior", paladin = "Paladin", hunter = "Hunter", rogue = "Rogue", priest = "Priest", shaman = "Shaman",
+                    mage = "Mage", warlock = "Warlock", druid = "Druid" } },
         { key = "wmAlpha", kind = "slider", label = "Emblem strength", min = 0.02, max = 0.5, step = 0.02, fmt = "%.2f" },
         { key = "artSize", kind = "slider", label = "Corner and crest size", min = 16, max = 96, step = 2 },
     } },
@@ -1602,6 +1660,11 @@ local function MakeRow(parent, id, row, isExtra)
                     row.set(v)
                 elseif row.preset then
                     local p = PRESETS[v]
+                    if p.dyn then
+                        local tok
+                        if UnitClass then local _, tk = UnitClass("player") tok = tk end
+                        p = PRESETS["c_" .. tostring(tok or ""):lower()] or PRESETS.gold
+                    end
                     t.preset = v
                     t.bgColor, t.edgeColor, t.titleColor = Copy(p.bg), Copy(p.edge), Copy(p.edge)
                     if p.look then for lk, lv in pairs(p.look) do t[lk] = lv end end
