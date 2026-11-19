@@ -351,7 +351,8 @@ local function Own(id)
     if e and e.defaults then for k, v in pairs(e.defaults) do if w[k] == nil then w[k] = Copy(v) end end end
     return w
 end
--- GreedUI (when it is installed and "dress my add-ons" is on) hands every window its colors, font and button look
+-- GreedUI (when it is installed and "dress my add-ons" is on) overlays appearance only;
+-- the add-on's saved enabled state, per-window settings and profiles remain authoritative.
 -- brighter by a factor, with a floor lift so a pure black panel still gets visibly lighter buttons
 local function Shade(c, f) local k = f > 1 and (f - 1) * 0.03 or 0 return { math.min(1, c[1] * f + k), math.min(1, c[2] * f + k), math.min(1, c[3] * f + k) } end
 local function GreedOverlay(w)
@@ -360,7 +361,6 @@ local function GreedOverlay(w)
     local t = G and G.GetTheme and G.GetTheme(cfg and cfg.title)
     if not (t and w) then return w end
     local o = Copy(w)
-    o.enabled = true
     o.bgColor, o.alpha = Copy(t.bg), math.max(0.2, tonumber(t.bgAlpha) or 0.92)
     o.bgBright, o.stoneAlpha = tonumber(t.bgBright) or 1, tonumber(t.stoneAlpha) or 0.45
     o.paper, o.paperColor, o.paperAlpha = t.paper, t.paperColor, t.paperAlpha
@@ -368,7 +368,8 @@ local function GreedOverlay(w)
     o.bgStyle, o.edgeStyle, o.edgeSize = t.bgStyle or "solid", t.edgeStyle or "line", tonumber(t.borderSize) or 1
     o.bgNoTint = t.bgNoTint ~= false
     o.edgeAlpha = tonumber(t.edgeAlpha) or 1
-    if t.fontScale then o.fontScale = tonumber(t.fontScale) or 1 end
+    -- GreedUI sets the text size, unless this window has its own (picked in the add-on's own options or the Text section)
+    if t.fontScale and not (w.fontOwn or (tonumber(w.fontScale) or 1) ~= 1) then o.fontScale = tonumber(t.fontScale) or 1 end
     if t.outline ~= nil then o.outline = t.outline and true or false end
     o.buttons, o.btnBgStyle = true, "solid"
     o.btnGloss, o.btnAlpha = t.btnGloss and true or false, tonumber(t.btnAlpha) or 1
