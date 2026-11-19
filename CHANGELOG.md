@@ -1,6 +1,6 @@
 # Guildie
 
-## Unreleased
+## v1.15.2
 - Your custom look is now shared with your other add-ons: change colors, background, border or opacity in one and the rest follow (the newest change wins). It is on by default; untick "Sync my look with my other add-ons" in the Look window to turn it off.
 
 ## v1.15.0
