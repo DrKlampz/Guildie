@@ -169,6 +169,61 @@ local PRESETS = {
         look = { bgStyle = "scales", cornerArt = "spike", crest = "skull", edgeArt = "spikes", banner = "plaque", divider = "diamond", watermark = "shield", edgeFx = "glow", flair = "none", depth = 0.45, bgNoTint = false, texScale = 1 } },
     fallen4 = { name = "Fallen kingdom: Silver vigil (art)", bg = { 0.1, 0.14, 0.26 }, edge = { 0.85, 0.88, 0.95 },
         look = { bgStyle = "marble", cornerArt = "filigree", crest = "wings", edgeArt = "beads", banner = "ribbon", divider = "flourish", watermark = "shield", edgeFx = "double", flair = "royal", depth = 0.45, bgNoTint = false, texScale = 1 } },
+    s_warrior_1 = { name = "Warrior: Arms (spec art)", bg = { 0.30, 0.26, 0.24 }, edge = { 0.80, 0.72, 0.60 }, class = "WARRIOR",
+        look = { bgStyle = "plate", cornerArt = "plate", crest = "none", edgeArt = "chain", banner = "plaque", divider = "beads", watermark = "warrior", edgeFx = "bevel", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.50, 0.10, 0.10 }, gradB = { 0.08, 0.07, 0.08 }, gradAlphaA = 0.75, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_warrior_2 = { name = "Warrior: Fury (spec art)", bg = { 0.32, 0.10, 0.08 }, edge = { 0.95, 0.28, 0.14 }, class = "WARRIOR",
+        look = { bgStyle = "leather", cornerArt = "spike", crest = "horns", edgeArt = "spikes", banner = "plaque", divider = "diamond", watermark = "warrior", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "radial", gradA = { 0.60, 0.07, 0.04 }, gradB = { 0.07, 0.02, 0.02 }, gradAlphaA = 0.8, gradAlphaB = 0.9, gradFlip = false, gradOver = "over" } },
+    s_warrior_3 = { name = "Warrior: Protection (spec art)", bg = { 0.18, 0.24, 0.36 }, edge = { 0.50, 0.66, 0.92 }, class = "WARRIOR",
+        look = { bgStyle = "plate", cornerArt = "plate", crest = "none", edgeArt = "chain", banner = "plaque", divider = "beads", watermark = "warrior", edgeFx = "double", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "h", gradA = { 0.16, 0.26, 0.50 }, gradB = { 0.05, 0.07, 0.13 }, gradAlphaA = 0.75, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_paladin_1 = { name = "Paladin: Holy (spec art)", bg = { 0.40, 0.34, 0.22 }, edge = { 1.00, 0.92, 0.62 }, class = "PALADIN",
+        look = { bgStyle = "marble", cornerArt = "filigree", crest = "wings", edgeArt = "beads", banner = "ribbon", divider = "flourish", watermark = "paladin", edgeFx = "glow", flair = "royal", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "vc", gradA = { 0.95, 0.85, 0.50 }, gradB = { 0.22, 0.16, 0.08 }, gradAlphaA = 0.55, gradAlphaB = 0.8, gradFlip = false, gradOver = "over" } },
+    s_paladin_2 = { name = "Paladin: Protection (spec art)", bg = { 0.18, 0.24, 0.40 }, edge = { 0.58, 0.72, 1.00 }, class = "PALADIN",
+        look = { bgStyle = "plate", cornerArt = "plate", crest = "crown", edgeArt = "chain", banner = "plaque", divider = "diamond", watermark = "paladin", edgeFx = "double", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.18, 0.28, 0.60 }, gradB = { 0.05, 0.07, 0.16 }, gradAlphaA = 0.75, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_paladin_3 = { name = "Paladin: Retribution (spec art)", bg = { 0.38, 0.22, 0.12 }, edge = { 1.00, 0.58, 0.22 }, class = "PALADIN",
+        look = { bgStyle = "damask", cornerArt = "filigree", crest = "crown", edgeArt = "beads", banner = "scroll", divider = "flourish", watermark = "paladin", edgeFx = "glow", flair = "royal", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "radial", gradA = { 0.70, 0.28, 0.07 }, gradB = { 0.12, 0.04, 0.03 }, gradAlphaA = 0.75, gradAlphaB = 0.9, gradFlip = false, gradOver = "over" } },
+    s_hunter_1 = { name = "Hunter: Beast Mastery (spec art)", bg = { 0.20, 0.30, 0.14 }, edge = { 0.82, 0.68, 0.28 }, class = "HUNTER",
+        look = { bgStyle = "wood", cornerArt = "vine", crest = "horns", edgeArt = "rope", banner = "plaque", divider = "beads", watermark = "hunter", edgeFx = "soft", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.22, 0.38, 0.15 }, gradB = { 0.05, 0.09, 0.04 }, gradAlphaA = 0.7, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_hunter_2 = { name = "Hunter: Marksmanship (spec art)", bg = { 0.16, 0.24, 0.30 }, edge = { 0.68, 0.88, 0.98 }, class = "HUNTER",
+        look = { bgStyle = "carbon", cornerArt = "plate", crest = "none", edgeArt = "chain", banner = "scroll", divider = "diamond", watermark = "hunter", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "h", gradA = { 0.16, 0.26, 0.34 }, gradB = { 0.04, 0.07, 0.09 }, gradAlphaA = 0.75, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_hunter_3 = { name = "Hunter: Survival (spec art)", bg = { 0.22, 0.30, 0.12 }, edge = { 0.68, 0.88, 0.28 }, class = "HUNTER",
+        look = { bgStyle = "leather", cornerArt = "vine", crest = "skull", edgeArt = "rope", banner = "plaque", divider = "beads", watermark = "hunter", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "diag", gradA = { 0.34, 0.46, 0.10 }, gradB = { 0.05, 0.08, 0.03 }, gradAlphaA = 0.75, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_rogue_1 = { name = "Rogue: Assassination (spec art)", bg = { 0.14, 0.22, 0.12 }, edge = { 0.58, 0.92, 0.36 }, class = "ROGUE",
+        look = { bgStyle = "carbon", cornerArt = "spike", crest = "skull", edgeArt = "spikes", banner = "plaque", divider = "diamond", watermark = "rogue", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.11, 0.28, 0.10 }, gradB = { 0.02, 0.04, 0.03 }, gradAlphaA = 0.8, gradAlphaB = 0.9, gradFlip = false, gradOver = "over" } },
+    s_rogue_2 = { name = "Rogue: Combat (spec art)", bg = { 0.30, 0.27, 0.16 }, edge = { 0.96, 0.86, 0.36 }, class = "ROGUE",
+        look = { bgStyle = "plate", cornerArt = "spike", crest = "none", edgeArt = "chain", banner = "plaque", divider = "beads", watermark = "rogue", edgeFx = "bevel", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "diag", gradA = { 0.34, 0.28, 0.09 }, gradB = { 0.05, 0.05, 0.06 }, gradAlphaA = 0.75, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_rogue_3 = { name = "Rogue: Subtlety (spec art)", bg = { 0.16, 0.10, 0.24 }, edge = { 0.68, 0.48, 0.92 }, class = "ROGUE",
+        look = { bgStyle = "carbon", cornerArt = "rune", crest = "none", edgeArt = "chain", banner = "gem", divider = "diamond", watermark = "rogue", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "radial", gradA = { 0.22, 0.10, 0.36 }, gradB = { 0.02, 0.01, 0.04 }, gradAlphaA = 0.85, gradAlphaB = 0.95, gradFlip = false, gradOver = "over" } },
+    s_priest_1 = { name = "Priest: Discipline (spec art)", bg = { 0.28, 0.32, 0.46 }, edge = { 0.88, 0.92, 1.00 }, class = "PRIEST",
+        look = { bgStyle = "marble", cornerArt = "filigree", crest = "gem", edgeArt = "beads", banner = "ribbon", divider = "flourish", watermark = "priest", edgeFx = "glow", flair = "royal", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "vc", gradA = { 0.55, 0.66, 0.96 }, gradB = { 0.09, 0.11, 0.24 }, gradAlphaA = 0.6, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_priest_2 = { name = "Priest: Holy (spec art)", bg = { 0.42, 0.38, 0.28 }, edge = { 1.00, 0.95, 0.72 }, class = "PRIEST",
+        look = { bgStyle = "paper", cornerArt = "filigree", crest = "wings", edgeArt = "beads", banner = "scroll", divider = "flourish", watermark = "priest", edgeFx = "soft", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.90, 0.84, 0.62 }, gradB = { 0.24, 0.20, 0.13 }, gradAlphaA = 0.6, gradAlphaB = 0.8, gradFlip = false, gradOver = "over" } },
+    s_priest_3 = { name = "Priest: Shadow (spec art)", bg = { 0.16, 0.08, 0.24 }, edge = { 0.72, 0.42, 0.96 }, class = "PRIEST",
+        look = { bgStyle = "runes", cornerArt = "rune", crest = "crescent", edgeArt = "runes", banner = "gem", divider = "diamond", watermark = "priest", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "radial", gradA = { 0.30, 0.08, 0.44 }, gradB = { 0.02, 0.00, 0.04 }, gradAlphaA = 0.85, gradAlphaB = 0.95, gradFlip = false, gradOver = "over" } },
+    s_shaman_1 = { name = "Shaman: Elemental (spec art)", bg = { 0.12, 0.20, 0.40 }, edge = { 0.38, 0.68, 1.00 }, class = "SHAMAN",
+        look = { bgStyle = "runes", cornerArt = "rune", crest = "none", edgeArt = "runes", banner = "plaque", divider = "diamond", watermark = "shaman", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.12, 0.32, 0.70 }, gradB = { 0.04, 0.07, 0.18 }, gradAlphaA = 0.8, gradAlphaB = 0.9, gradFlip = false, gradOver = "over" } },
+    s_shaman_2 = { name = "Shaman: Enhancement (spec art)", bg = { 0.12, 0.20, 0.30 }, edge = { 0.34, 0.78, 0.96 }, class = "SHAMAN",
+        look = { bgStyle = "stone", cornerArt = "rune", crest = "horns", edgeArt = "rope", banner = "plaque", divider = "beads", watermark = "shaman", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "diag", gradA = { 0.10, 0.30, 0.46 }, gradB = { 0.24, 0.11, 0.04 }, gradAlphaA = 0.8, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_shaman_3 = { name = "Shaman: Restoration (spec art)", bg = { 0.10, 0.28, 0.32 }, edge = { 0.34, 0.88, 0.82 }, class = "SHAMAN",
+        look = { bgStyle = "wood", cornerArt = "vine", crest = "wings", edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "shaman", edgeFx = "soft", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.08, 0.42, 0.48 }, gradB = { 0.03, 0.10, 0.18 }, gradAlphaA = 0.8, gradAlphaB = 0.9, gradFlip = false, gradOver = "over" } },
+    s_mage_1 = { name = "Mage: Arcane (spec art)", bg = { 0.20, 0.10, 0.34 }, edge = { 0.86, 0.58, 1.00 }, class = "MAGE",
+        look = { bgStyle = "runes", cornerArt = "arcane", crest = "gem", edgeArt = "runes", banner = "gem", divider = "diamond", watermark = "mage", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "radial", gradA = { 0.48, 0.20, 0.80 }, gradB = { 0.07, 0.03, 0.18 }, gradAlphaA = 0.85, gradAlphaB = 0.95, gradFlip = false, gradOver = "over" } },
+    s_mage_2 = { name = "Mage: Fire (spec art)", bg = { 0.30, 0.10, 0.05 }, edge = { 1.00, 0.58, 0.16 }, class = "MAGE",
+        look = { bgStyle = "damask", cornerArt = "arcane", crest = "crown", edgeArt = "runes", banner = "plaque", divider = "diamond", watermark = "mage", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.09, 0.03, 0.02 }, gradB = { 0.80, 0.24, 0.05 }, gradAlphaA = 0.8, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_mage_3 = { name = "Mage: Frost (spec art)", bg = { 0.14, 0.28, 0.42 }, edge = { 0.66, 0.90, 1.00 }, class = "MAGE",
+        look = { bgStyle = "marble", cornerArt = "arcane", crest = "gem", edgeArt = "beads", banner = "gem", divider = "diamond", watermark = "mage", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.78, 0.94, 1.00 }, gradB = { 0.08, 0.20, 0.42 }, gradAlphaA = 0.55, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_warlock_1 = { name = "Warlock: Affliction (spec art)", bg = { 0.16, 0.22, 0.12 }, edge = { 0.68, 0.88, 0.36 }, class = "WARLOCK",
+        look = { bgStyle = "scales", cornerArt = "rune", crest = "skull", edgeArt = "runes", banner = "gem", divider = "diamond", watermark = "warlock", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "radial", gradA = { 0.20, 0.34, 0.10 }, gradB = { 0.09, 0.02, 0.16 }, gradAlphaA = 0.85, gradAlphaB = 0.95, gradFlip = false, gradOver = "over" } },
+    s_warlock_2 = { name = "Warlock: Demonology (spec art)", bg = { 0.22, 0.10, 0.32 }, edge = { 0.56, 0.98, 0.30 }, class = "WARLOCK",
+        look = { bgStyle = "runes", cornerArt = "spike", crest = "horns", edgeArt = "chain", banner = "gem", divider = "diamond", watermark = "warlock", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "diag", gradA = { 0.32, 0.10, 0.48 }, gradB = { 0.05, 0.18, 0.04 }, gradAlphaA = 0.85, gradAlphaB = 0.9, gradFlip = false, gradOver = "over" } },
+    s_warlock_3 = { name = "Warlock: Destruction (spec art)", bg = { 0.26, 0.08, 0.05 }, edge = { 1.00, 0.48, 0.12 }, class = "WARLOCK",
+        look = { bgStyle = "plate", cornerArt = "spike", crest = "horns", edgeArt = "spikes", banner = "plaque", divider = "diamond", watermark = "warlock", edgeFx = "glow", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.06, 0.02, 0.02 }, gradB = { 0.75, 0.19, 0.04 }, gradAlphaA = 0.85, gradAlphaB = 0.9, gradFlip = false, gradOver = "over" } },
+    s_druid_1 = { name = "Druid: Balance (spec art)", bg = { 0.14, 0.14, 0.34 }, edge = { 0.82, 0.86, 1.00 }, class = "DRUID",
+        look = { bgStyle = "marble", cornerArt = "vine", crest = "crescent", edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "druid", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "v", gradA = { 0.10, 0.13, 0.38 }, gradB = { 0.34, 0.20, 0.48 }, gradAlphaA = 0.8, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_druid_2 = { name = "Druid: Feral (spec art)", bg = { 0.30, 0.16, 0.07 }, edge = { 1.00, 0.56, 0.12 }, class = "DRUID",
+        look = { bgStyle = "leather", cornerArt = "spike", crest = "horns", edgeArt = "rope", banner = "plaque", divider = "beads", watermark = "druid", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "h", gradA = { 0.48, 0.22, 0.05 }, gradB = { 0.10, 0.07, 0.04 }, gradAlphaA = 0.75, gradAlphaB = 0.85, gradFlip = false, gradOver = "over" } },
+    s_druid_3 = { name = "Druid: Restoration (spec art)", bg = { 0.12, 0.28, 0.16 }, edge = { 0.58, 0.96, 0.58 }, class = "DRUID",
+        look = { bgStyle = "wood", cornerArt = "vine", crest = "wings", edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "druid", edgeFx = "soft", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1, gradMode = "radial", gradA = { 0.16, 0.44, 0.20 }, gradB = { 0.04, 0.10, 0.07 }, gradAlphaA = 0.8, gradAlphaB = 0.9, gradFlip = false, gradOver = "over" } },
+    myspec   = { name = "My spec (automatic colors and art)", bg = { 0.05, 0.05, 0.07 }, edge = { 0.88, 0.69, 0.29 }, dyn = "spec" },
     grove    = { name = "Moonlit grove (art)", bg = { 0.20, 0.12, 0.38 }, edge = { 0.78, 0.68, 1.00 },
                  look = { bgStyle = "arcane", cornerArt = "vine", crest = "crescent", edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "druid", edgeFx = "glow", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
     plague   = { name = "Plaguelands (art)", bg = { 0.16, 0.26, 0.14 }, edge = { 0.64, 0.92, 0.42 },
@@ -196,8 +251,9 @@ local PRESETS = {
 }
 local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "ember", "void", "frost", "mono", "light",
     "arcane", "forge", "glade", "tome", "runestone", "court", "dragon", "oak",
-    "myclass", "alliance", "horde", "violet", "fallen", "alliance2", "alliance3", "alliance4", "horde2", "horde3", "horde4", "violet2", "violet3", "violet4", "fallen2", "fallen3", "fallen4", "grove", "plague",
+    "myclass", "myspec", "alliance", "horde", "violet", "fallen", "alliance2", "alliance3", "alliance4", "horde2", "horde3", "horde4", "violet2", "violet3", "violet4", "fallen2", "fallen3", "fallen4", "grove", "plague",
     "c_warrior", "c_paladin", "c_hunter", "c_rogue", "c_priest", "c_shaman", "c_mage", "c_warlock", "c_druid",
+    "s_warrior_1", "s_warrior_2", "s_warrior_3", "s_paladin_1", "s_paladin_2", "s_paladin_3", "s_hunter_1", "s_hunter_2", "s_hunter_3", "s_rogue_1", "s_rogue_2", "s_rogue_3", "s_priest_1", "s_priest_2", "s_priest_3", "s_shaman_1", "s_shaman_2", "s_shaman_3", "s_mage_1", "s_mage_2", "s_mage_3", "s_warlock_1", "s_warlock_2", "s_warlock_3", "s_druid_1", "s_druid_2", "s_druid_3",
     "c_warrior2", "c_warrior3", "c_warrior4", "c_warrior5", "c_paladin2", "c_paladin3", "c_paladin4", "c_paladin5", "c_hunter2", "c_hunter3", "c_hunter4", "c_hunter5", "c_rogue2", "c_rogue3", "c_rogue4", "c_rogue5", "c_priest2", "c_priest3", "c_priest4", "c_priest5", "c_shaman2", "c_shaman3", "c_shaman4", "c_shaman5", "c_mage2", "c_mage3", "c_mage4", "c_mage5", "c_warlock2", "c_warlock3", "c_warlock4", "c_warlock5", "c_druid2", "c_druid3", "c_druid4", "c_druid5" }
 
 local BG_ORDER = { "solid", "dark", "parchment", "marble", "rock", "tooltip", "leather", "stone", "linen", "carbon", "brushed", "gradient",
@@ -415,6 +471,7 @@ local function Defaults()
         follow = true, edgeFx = "none", depth = 0, topLight = 0, texScale = 1, flair = "gilded", pulse = false,
         cornerArt = "none", crest = "none", artSize = 40,
         edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10,
+        gradMode = "none", gradFlip = false, gradA = { 0.30, 0.18, 0.55 }, gradB = { 0.04, 0.02, 0.10 }, gradAlphaA = 0.9, gradAlphaB = 0.9, gradOver = "over",
     }
 end
 
@@ -1052,6 +1109,73 @@ local function Art2(bg, s, inset, e, spec, frame)
     end
 end
 
+-- a two-color gradient between the background and the art; either color and either end's opacity can be set
+local GRAD_ORDER = { "none", "v", "h", "vc", "hc", "diag", "diag2", "radial" }
+local GRAD_NAMES = { none = "None", v = "Vertical (top to bottom)", h = "Horizontal (left to right)",
+    vc = "Vertical from the middle out", hc = "Horizontal from the middle out",
+    diag = "Diagonal (top-left to bottom-right)", diag2 = "Diagonal (top-right to bottom-left)", radial = "Center to the borders" }
+local function Gradient(bg, s, inset)
+    local g = bg.lookGrad
+    if not g then g = {} bg.lookGrad = g end
+    for _, t in pairs(g) do t:Hide() end
+    bg.lookGradRep = false
+    local mode = s.gradMode or "none"
+    if mode == "none" or not GRAD_NAMES[mode] then return end
+    local function C(c, d) c = type(c) == "table" and c or d return { tonumber(c[1]) or 0, tonumber(c[2]) or 0, tonumber(c[3]) or 0 } end
+    local A, B = C(s.gradA, { 0.30, 0.18, 0.55 }), C(s.gradB, { 0.04, 0.02, 0.10 })
+    local function Al(v) v = tonumber(v) if v == nil then v = 0.9 end return math.max(0, math.min(1, v)) end
+    local aA, aB = Al(s.gradAlphaA), Al(s.gradAlphaB)
+    if s.gradFlip then A, B, aA, aB = B, A, aB, aA end
+    local rep = s.gradOver == "replace"
+    local mul = rep and math.max(0, math.min(1, tonumber(s.alpha) or 1)) or 1
+    aA, aB = aA * mul, aB * mul
+    bg.lookGradRep = rep
+    local function T(key, p1, p2, o1, o2)
+        local t = g[key]
+        if not t then t = bg:CreateTexture(nil, "BACKGROUND", nil, 1) g[key] = t end
+        t:ClearAllPoints()
+        t:SetTexture(WHITE)
+        t:SetTexCoord(0, 1, 0, 1)
+        t:SetVertexColor(1, 1, 1, 1)
+        t:SetAlpha(1)
+        t:SetPoint("TOPLEFT", bg, p1 or "TOPLEFT", (o1 or 0) + inset * ((p1 or "TOPLEFT"):find("LEFT") and 1 or 0), 0)
+        t:Show()
+        return t
+    end
+    local function Area(t, tl, br)   -- fill the window (inside the border), or a half of it
+        t:ClearAllPoints()
+        t:SetPoint("TOPLEFT", bg, tl[1], tl[2], tl[3])
+        t:SetPoint("BOTTOMRIGHT", bg, br[1], br[2], br[3])
+    end
+    local function Lin(t, orient, c1, a1, c2, a2)   -- first color is the bottom or left end
+        if t.SetGradient and CreateColor then pcall(t.SetGradient, t, orient, CreateColor(c1[1], c1[2], c1[3], a1), CreateColor(c2[1], c2[2], c2[3], a2))
+        elseif t.SetGradientAlpha then pcall(t.SetGradientAlpha, t, orient, c1[1], c1[2], c1[3], a1, c2[1], c2[2], c2[3], a2) end
+    end
+    local i = inset
+    if mode == "v" then
+        local t = T("a") Area(t, { "TOPLEFT", i, -i }, { "BOTTOMRIGHT", -i, i }) Lin(t, "VERTICAL", B, aB, A, aA)
+    elseif mode == "h" then
+        local t = T("a") Area(t, { "TOPLEFT", i, -i }, { "BOTTOMRIGHT", -i, i }) Lin(t, "HORIZONTAL", A, aA, B, aB)
+    elseif mode == "vc" then
+        local t = T("a") Area(t, { "TOPLEFT", i, -i }, { "RIGHT", -i, 0 }) Lin(t, "VERTICAL", A, aA, B, aB)
+        local u = T("b") Area(u, { "LEFT", i, 0 }, { "BOTTOMRIGHT", -i, i }) Lin(u, "VERTICAL", B, aB, A, aA)
+    elseif mode == "hc" then
+        local t = T("a") Area(t, { "TOPLEFT", i, -i }, { "BOTTOM", 0, i }) Lin(t, "HORIZONTAL", B, aB, A, aA)
+        local u = T("b") Area(u, { "TOP", 0, -i }, { "BOTTOMRIGHT", -i, i }) Lin(u, "HORIZONTAL", A, aA, B, aB)
+    else   -- the diagonal and round ones use a soft ramp picture, one layer per color
+        local m = (cfg and cfg.media) or ""
+        local f1, f2 = m .. "Art_Grad_diag", m .. "Art_Grad_diag"
+        local c1, c2 = { 0, 1, 0, 1 }, { 0, 1, 0, 1 }   -- A uses the reversed ramp, B the ramp
+        if mode == "diag" then c1 = { 1, 0, 1, 0 }
+        elseif mode == "diag2" then c2 = { 1, 0, 0, 1 } c1 = { 0, 1, 1, 0 }
+        else f1, f2 = m .. "Art_Grad_rad_in", m .. "Art_Grad_rad_out" end
+        local t = T("a") Area(t, { "TOPLEFT", i, -i }, { "BOTTOMRIGHT", -i, i })
+        t:SetTexture(f1) t:SetTexCoord(c1[1], c1[2], c1[3], c1[4]) t:SetVertexColor(A[1], A[2], A[3], aA)
+        local u = T("b") Area(u, { "TOPLEFT", i, -i }, { "BOTTOMRIGHT", -i, i })
+        u:SetTexture(f2) u:SetTexCoord(c2[1], c2[2], c2[3], c2[4]) u:SetVertexColor(B[1], B[2], B[3], aB)
+    end
+end
+
 local function ApplyOne(spec)
     local frame = attached[spec.id]
     if not frame then return end
@@ -1090,7 +1214,8 @@ local function ApplyOne(spec)
         local c = s.bgColor
         if st ~= styles.solid and s.bgNoTint then c = { 1, 1, 1 } end
         local br = tonumber(s.bgBright) or 1
-        bg:SetBackdropColor(math.min(1, c[1] * math.min(1, br)), math.min(1, c[2] * math.min(1, br)), math.min(1, c[3] * math.min(1, br)), tonumber(s.alpha) or 0.96)
+        Safe(Gradient, bg, s, inset)
+        bg:SetBackdropColor(math.min(1, c[1] * math.min(1, br)), math.min(1, c[2] * math.min(1, br)), math.min(1, c[3] * math.min(1, br)), bg.lookGradRep and 0 or (tonumber(s.alpha) or 0.96))
         do   -- brighter than the texture itself: a soft white wash over it
             if br > 1 then
                 if not bg.lookWash then bg.lookWash = bg:CreateTexture(nil, "BACKGROUND", nil, 2) bg.lookWash:SetTexture(WHITE) end
@@ -1639,6 +1764,15 @@ local SECTIONS = {
         { key = "header", kind = "check", label = "Header bar behind the title" },
         { key = "headerSize", kind = "slider", label = "Header bar height", min = 16, max = 44, step = 1 },
     } },
+    { id = "grad", title = "Gradient (all optional)", rows = {
+        { key = "gradMode", kind = "cycle", label = "Gradient", values = GRAD_ORDER, names = GRAD_NAMES },
+        { key = "gradA", kind = "color", label = "First color (top, left, or middle)" },
+        { key = "gradB", kind = "color", label = "Second color (bottom, right, or the borders)" },
+        { key = "gradAlphaA", kind = "slider", label = "First color opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "gradAlphaB", kind = "slider", label = "Second color opacity", min = 0, max = 1, step = 0.05, fmt = "%.2f" },
+        { key = "gradFlip", kind = "check", label = "Swap the two colors (reverse the direction)" },
+        { key = "gradOver", kind = "cycle", label = "Gradient sits", values = { "over", "replace" }, names = { over = "Over the background texture", replace = "Instead of the background" } },
+    } },
     { id = "art", title = "Artwork (all optional)", rows = {
         { key = "edgeArt", kind = "cycle", label = "Ornament along the edges", values = { "none", "rope", "chain", "beads", "runes", "vine", "spikes" },
           names = { none = "None", rope = "Twisted rope", chain = "Iron chain", beads = "Pearl beads", runes = "Carved runes", vine = "Creeping vine", spikes = "Iron spikes" } },
@@ -1794,11 +1928,25 @@ local function MakeRow(parent, id, row, isExtra)
                     if p.dyn then
                         local tok
                         if UnitClass then local _, tk = UnitClass("player") tok = tk end
-                        p = PRESETS["c_" .. tostring(tok or ""):lower()] or PRESETS.gold
+                        tok = tostring(tok or ""):lower()
+                        local key = "c_" .. tok
+                        if p.dyn == "spec" and _G.GetNumTalentTabs then   -- the talent tree with the most points
+                            local bi, bp = nil, 0
+                            for i = 1, (_G.GetNumTalentTabs() or 0) do
+                                local r = { pcall(_G.GetTalentTabInfo, i) }
+                                if r[1] then
+                                    local pts = tonumber(type(r[2]) == "number" and r[6] or r[4]) or 0
+                                    if pts > bp then bp, bi = pts, i end
+                                end
+                            end
+                            if bi and PRESETS["s_" .. tok .. "_" .. bi] then key = "s_" .. tok .. "_" .. bi end
+                        end
+                        p = PRESETS[key] or PRESETS.gold
                     end
                     t.preset = v
                     t.bgColor, t.edgeColor, t.titleColor = Copy(p.bg), Copy(p.edge), Copy(p.edge)
-                    if p.look then for lk, lv in pairs(p.look) do t[lk] = lv end end
+                    t.gradMode = "none"
+                    if p.look then for lk, lv in pairs(p.look) do t[lk] = Copy(lv) end end
                 else
                     t[row.key] = v
                 end
@@ -1966,6 +2114,7 @@ local function ProfileStep(dir)
     ProfileUse(list[idx])
 end
 
+Look.Presets, Look.PresetOrder = PRESETS, PRESET_ORDER
 Look.ProfileList, Look.ProfileUse, Look.ProfileSaveAs, Look.ProfileDelete, Look.ProfileNow = ProfileList, ProfileUse, ProfileSaveAs, ProfileDelete, ProfileNow
 local function Synced() local L = Store() return L and L.sync and #windows > 1 end
 
