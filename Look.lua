@@ -656,6 +656,7 @@ local function Fx(bg, s, inset, e)
             fx.t[n] = t
         end
         t:ClearAllPoints()
+        t:SetAlpha(1)
         if t.SetGradient then pcall(t.SetGradient, t, "VERTICAL", CreateColor(1, 1, 1, 1), CreateColor(1, 1, 1, 1)) end
         t:Show()
         return t
@@ -689,6 +690,7 @@ local function Fx(bg, s, inset, e)
     end
     local style = s.edgeFx or "none"
     local i0 = inset
+    local edgeFrom = n + 1   -- the textures of the edge finish are n+1 .. edgeTo (they pulse with the flair)
     if style == "soft" then
         Line("T", 1, i0, 0, 0, 0, 0.55) Line("B", 1, i0, 0, 0, 0, 0.55) Line("L", 1, i0, 0, 0, 0, 0.55) Line("R", 1, i0, 0, 0, 0, 0.55)
         for k = 1, 2 do
@@ -708,6 +710,7 @@ local function Fx(bg, s, inset, e)
         end
     end
 
+    fx.edgeFrom, fx.edgeTo = edgeFrom, n
     -- flair: a gilded inner line with corner studs ("gilded"), or a second line and diamond corners ("royal")
     local flair = s.flair or "none"
     fx.studs = fx.studs or {}
@@ -737,7 +740,7 @@ local function Fx(bg, s, inset, e)
             st:Show()
         end
     end
-    -- optional slow pulse of the studs and the glow
+    -- optional slow pulse of the studs and the edge finish
     if not fx.pulser then
         fx.pulser = CreateFrame("Frame", nil, bg)
         fx.pulser.t = 0
@@ -746,10 +749,15 @@ local function Fx(bg, s, inset, e)
             self.t = self.t + dt
             local k = 0.65 + 0.35 * math.sin(self.t * 2.2)
             for _, st in ipairs(fx.studs or {}) do if st:IsShown() then st:SetAlpha(k) end end
+            local k2 = 0.55 + 0.45 * math.sin(self.t * 2.2)
+            for i = fx.edgeFrom or 1, fx.edgeTo or 0 do local t = fx.t[i] if t and t:IsShown() then t:SetAlpha(k2) end end
         end)
     end
     fx.pulser.on = s.pulse and true or false
-    if not s.pulse then for _, st in ipairs(fx.studs) do st:SetAlpha(1) end end
+    if not s.pulse then
+        for _, st in ipairs(fx.studs) do st:SetAlpha(1) end
+        for i = fx.edgeFrom or 1, fx.edgeTo or 0 do if fx.t[i] then fx.t[i]:SetAlpha(1) end end
+    end
     for i = n + 1, #fx.t do fx.t[i]:Hide() end
 end
 
@@ -1342,7 +1350,7 @@ local SECTIONS = {
           names = { none = "Plain", soft = "Soft (inner shadow and faint glow)", bevel = "Bevel (raised)", double = "Double line", glow = "Glow" } },
         { key = "flair", kind = "cycle", label = "Flair (gold trim)", values = { "none", "gilded", "royal" },
           names = { none = "None", gilded = "Gilded line and studs", royal = "Royal: double line and diamond corners" } },
-        { key = "pulse", kind = "check", label = "Pulse the flair" },
+        { key = "pulse", kind = "check", label = "Pulse the flair and the edge finish" },
         { key = "edgeSize", kind = "slider", label = "Line thickness", min = 1, max = 8, step = 1 },
         { key = "header", kind = "check", label = "Header bar behind the title" },
         { key = "headerSize", kind = "slider", label = "Header bar height", min = 16, max = 44, step = 1 },

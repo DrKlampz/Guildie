@@ -1,5 +1,8 @@
 # Guildie
 
+## Unreleased
+- The "Pulse the flair" option now also pulses the edge finish (soft, bevel, double line and glow), not just the corner studs.
+
 ## v1.15.3
 - Look sync: the first time your add-ons meet, they now all take on the same look right away (Baggie's, if it is installed) instead of waiting for you to change something. Baggie no longer shares its title bar color, which means something different there.
 
