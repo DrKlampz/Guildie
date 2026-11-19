@@ -425,11 +425,29 @@ local function Copy(v)
     return t
 end
 
+-- looks can be saved as named profiles; every character remembers which profile it wears
+local charKeyCache
+local function CharKey()
+    if charKeyCache then return charKeyCache end
+    local n = _G.UnitName and _G.UnitName("player")
+    if not n or n == "" or n == "Unknown" or n == _G.UNKNOWNOBJECT then return nil end
+    charKeyCache = n .. "-" .. tostring(_G.GetRealmName and _G.GetRealmName() or "")
+    return charKeyCache
+end
+local function ActiveProfile(db)
+    local k = CharKey()
+    local n = k and db.winlookActive and db.winlookActive[k]
+    if n and n ~= "Default" and db.winlookProfiles and type(db.winlookProfiles[n]) == "table" then return n end
+    return "Default"
+end
+
 local function Store()
     local db = cfg and cfg.db and cfg.db()
     if not db then return nil end
     db.winlook = db.winlook or {}
     local L = db.winlook
+    local pn = ActiveProfile(db)
+    if pn ~= "Default" then L = db.winlookProfiles[pn] end
     if L.sync == nil then L.sync = not (cfg and cfg.syncDefault == false) end
     if cfg and cfg.syncDefault == false and not L.syncReset then L.sync = false L.syncReset = true end
     L.w = L.w or {}
@@ -1875,6 +1893,80 @@ local function MakeRow(parent, id, row, isExtra)
     return w
 end
 
+local function ProfileList()
+    local db = cfg and cfg.db and cfg.db()
+    local names = { "Default" }
+    local t = {}
+    if db and db.winlookProfiles then for n, v in pairs(db.winlookProfiles) do if type(v) == "table" then t[#t + 1] = n end end end
+    table.sort(t, function(a, b) return a:lower() < b:lower() end)
+    for _, n in ipairs(t) do names[#names + 1] = n end
+    return names
+end
+local function ProfileNow()
+    local db = cfg and cfg.db and cfg.db()
+    return db and ActiveProfile(db) or "Default"
+end
+local function ProfileRefresh()
+    ApplyAll()
+    for id in pairs(built) do Safe(Relayout, id) end
+    Safe(RefreshAll)
+    if win and win.DrawProfile then win.DrawProfile() end
+end
+-- wear profile `name` on this character (`quiet` = another add-on asked, so don't tell the others again)
+local function ProfileUse(name, quiet)
+    local db = cfg and cfg.db and cfg.db()
+    local k = CharKey()
+    if not (db and k) then return false end
+    if name ~= "Default" and not (db.winlookProfiles and type(db.winlookProfiles[name]) == "table") then
+        if not quiet then return false end
+        db.winlookProfiles = db.winlookProfiles or {}
+        db.winlookProfiles[name] = Copy(Store() or {})   -- an add-on that never saved this name starts from its current look
+    end
+    db.winlookActive = db.winlookActive or {}
+    db.winlookActive[k] = name
+    local L = Store()
+    if L then L.shareSig = ShareSig(ShareSnap() or {}) L.shareStamp = L.shareStamp or 0 end
+    ProfileRefresh()
+    if not quiet and ShareOn() then
+        local mine = Hub.m[tostring(cfg.title)]
+        for _, m in pairs(Hub.m) do
+            if m ~= mine and m.on() and m.profile then Safe(m.profile, name) end
+        end
+    end
+    return true
+end
+-- save the look I'm wearing under a new name and switch to it
+local function ProfileSaveAs(name)
+    name = tostring(name or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if name == "" or name:lower() == "default" then return false, "Pick a name (not \"Default\")." end
+    local db = cfg and cfg.db and cfg.db()
+    if not db then return false end
+    db.winlookProfiles = db.winlookProfiles or {}
+    local existing
+    for n in pairs(db.winlookProfiles) do if n:lower() == name:lower() then existing = n end end
+    if existing then name = existing end
+    local cur = Store()
+    if cur and db.winlookProfiles[name] ~= cur then db.winlookProfiles[name] = Copy(cur) end
+    return ProfileUse(name), name
+end
+local function ProfileDelete(name)
+    local db = cfg and cfg.db and cfg.db()
+    if not (db and name ~= "Default" and db.winlookProfiles) then return false end
+    db.winlookProfiles[name] = nil
+    for ck, n in pairs(db.winlookActive or {}) do if n == name then db.winlookActive[ck] = "Default" end end
+    ProfileRefresh()
+    return true
+end
+local function ProfileStep(dir)
+    local list = ProfileList()
+    local cur = ProfileNow()
+    local idx = 1
+    for i, n in ipairs(list) do if n == cur then idx = i end end
+    idx = ((idx - 1 + dir) % #list) + 1
+    ProfileUse(list[idx])
+end
+
+Look.ProfileList, Look.ProfileUse, Look.ProfileSaveAs, Look.ProfileDelete, Look.ProfileNow = ProfileList, ProfileUse, ProfileSaveAs, ProfileDelete, ProfileNow
 local function Synced() local L = Store() return L and L.sync and #windows > 1 end
 
 local function OpenState(id, sec, first)
@@ -2067,6 +2159,44 @@ local function Build()
         top = -70
     end
 
+    do   -- look profiles: save a look under a name and switch between them (each character remembers its own)
+        local lbl = Text(win, 11, DIM)
+        lbl:SetPoint("TOPLEFT", win, "TOPLEFT", 16, top - 4)
+        lbl:SetText("Profile for this character:")
+        local nameBtn = FlatButton(win, "Default", 150, 22)
+        nameBtn:SetPoint("LEFT", lbl, "RIGHT", 8, 0)
+        local prev = FlatButton(win, "<", 22, 22, function() ProfileStep(-1) end)
+        prev:SetPoint("LEFT", nameBtn, "RIGHT", 4, 0)
+        local nxt = FlatButton(win, ">", 22, 22, function() ProfileStep(1) end)
+        nxt:SetPoint("LEFT", prev, "RIGHT", 2, 0)
+        nameBtn:SetScript("OnClick", function() ProfileStep(1) end)
+        local del = FlatButton(win, "Delete", 54, 22, function() local n = ProfileNow() if n ~= "Default" then ProfileDelete(n) end end)
+        del:SetPoint("LEFT", nxt, "RIGHT", 8, 0)
+        local eb = CreateFrame("EditBox", nil, win, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        eb:SetSize(150, 22) eb:SetAutoFocus(false) eb:SetMaxLetters(24)
+        eb:SetFont(FONT, 11, "") eb:SetTextInsets(6, 6, 0, 0)
+        eb:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+        eb:SetBackdropColor(FIELD[1], FIELD[2], FIELD[3], 1) eb:SetBackdropBorderColor(LINE[1], LINE[2], LINE[3], 1)
+        eb:SetPoint("TOPLEFT", win, "TOPLEFT", 16, top - 32)
+        local hintFS = Text(eb, 11, DIM) hintFS:SetPoint("LEFT", 6, 0) hintFS:SetText("New profile name")
+        eb:SetScript("OnTextChanged", function(self) hintFS:SetShown((self:GetText() or "") == "") end)
+        eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+        local function Save()
+            local ok, nm = ProfileSaveAs(eb:GetText())
+            if ok then eb:SetText("") eb:ClearFocus() elseif nm then print(tostring(cfg.title) .. ": " .. tostring(nm)) end
+        end
+        eb:SetScript("OnEnterPressed", Save)
+        local sv = FlatButton(win, "Save current look as new", 160, 22, Save)
+        sv:SetPoint("LEFT", eb, "RIGHT", 8, 0)
+        win.DrawProfile = function()
+            local n = ProfileNow()
+            nameBtn.text:SetText(n)
+            del:SetShown(n ~= "Default")
+        end
+        win.DrawProfile()
+        top = top - 60
+    end
+
     do   -- share my look with my other add-ons
         local sb = Box(win, 16, 16)
         sb:SetPoint("TOPLEFT", win, "TOPLEFT", 16, top)
@@ -2137,7 +2267,7 @@ local function Build()
     hint:SetPoint("BOTTOMRIGHT", -16, 20)
     win.hintTxt = hint
     hint:SetText("Untick \"Use a custom look\" to get the original back.")
-    win:SetScript("OnShow", function() if win.DrawSync then win.DrawSync() end if win.DrawShare then win.DrawShare() end RefreshAll() end)
+    win:SetScript("OnShow", function() if win.DrawSync then win.DrawSync() end if win.DrawShare then win.DrawShare() end if win.DrawProfile then win.DrawProfile() end RefreshAll() end)
     win:SetScript("OnHide", CloseMenu)
     -- the options/look panel takes the same colors, background, border and fonts as the first window
     local pspec = { id = "_look", name = "Look", strip = "backdrop", noScale = true, title = function() return win.titleFS end }
@@ -2218,6 +2348,7 @@ function Look.Setup(c)
         snap = ShareSnap,
         take = ShareTake,
         seed = ShareSeed,
+        profile = function(name) ProfileUse(name, true) end,
     }
     if c.slash then
         local key = "LOOK" .. tostring(c.title):upper()
