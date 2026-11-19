@@ -51,21 +51,21 @@ local PRESETS = {
     light    = { name = "Parchment",       bg = { 0.85, 0.82, 0.75 }, edge = { 0.45, 0.35, 0.20 } },
     -- themes with artwork: a texture, corner pieces and a crest come with the colors
     arcane   = { name = "Arcane library (art)", bg = { 0.14, 0.15, 0.38 }, edge = { 0.60, 0.68, 1.00 },
-                 look = { bgStyle = "arcane", cornerArt = "arcane", crest = "gem", edgeFx = "glow", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
+                 look = { edgeArt = "runes", banner = "gem", divider = "diamond", watermark = "rings", bgStyle = "arcane", cornerArt = "arcane", crest = "gem", edgeFx = "glow", flair = "gilded", depth = 0.45, bgNoTint = false, texScale = 1 } },
     forge    = { name = "Dwarven forge (art)",  bg = { 0.42, 0.30, 0.24 }, edge = { 0.95, 0.58, 0.22 },
-                 look = { bgStyle = "plate", cornerArt = "plate", crest = "none", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1 } },
+                 look = { edgeArt = "chain", banner = "plaque", divider = "beads", watermark = "shield", bgStyle = "plate", cornerArt = "plate", crest = "none", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1 } },
     glade    = { name = "Elven glade (art)",    bg = { 0.20, 0.38, 0.22 }, edge = { 0.70, 0.92, 0.45 },
-                 look = { bgStyle = "damask", cornerArt = "vine", crest = "scroll", edgeFx = "soft", flair = "gilded", depth = 0.35, bgNoTint = false, texScale = 1 } },
+                 look = { edgeArt = "vine", banner = "ribbon", divider = "flourish", watermark = "laurel", bgStyle = "damask", cornerArt = "vine", crest = "scroll", edgeFx = "soft", flair = "gilded", depth = 0.35, bgNoTint = false, texScale = 1 } },
     tome     = { name = "Old tome (art)",       bg = { 0.86, 0.74, 0.52 }, edge = { 0.40, 0.24, 0.10 },
-                 look = { bgStyle = "paper", cornerArt = "filigree", crest = "scroll", edgeFx = "soft", flair = "gilded", depth = 0.3, bgNoTint = false, texScale = 1 } },
+                 look = { edgeArt = "rope", banner = "scroll", divider = "flourish", watermark = "compass", bgStyle = "paper", cornerArt = "filigree", crest = "scroll", edgeFx = "soft", flair = "gilded", depth = 0.3, bgNoTint = false, texScale = 1 } },
     runestone = { name = "Runestone (art)",     bg = { 0.30, 0.36, 0.42 }, edge = { 0.55, 0.88, 0.98 },
-                 look = { bgStyle = "runes", cornerArt = "rune", crest = "none", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1 } },
+                 look = { edgeArt = "runes", banner = "plaque", divider = "diamond", watermark = "rings", bgStyle = "runes", cornerArt = "rune", crest = "none", edgeFx = "bevel", flair = "none", depth = 0.4, bgNoTint = false, texScale = 1 } },
     court    = { name = "Royal court (art)",    bg = { 0.55, 0.12, 0.18 }, edge = { 0.96, 0.80, 0.36 },
-                 look = { bgStyle = "damask", cornerArt = "filigree", crest = "crown", edgeFx = "double", flair = "royal", depth = 0.35, bgNoTint = false, texScale = 1 } },
+                 look = { edgeArt = "beads", banner = "none", divider = "flourish", watermark = "laurel", bgStyle = "damask", cornerArt = "filigree", crest = "crown", edgeFx = "double", flair = "royal", depth = 0.35, bgNoTint = false, texScale = 1 } },
     dragon   = { name = "Dragonscale (art)",    bg = { 0.10, 0.36, 0.30 }, edge = { 0.45, 0.98, 0.72 },
-                 look = { bgStyle = "scales", cornerArt = "plate", crest = "wings", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1.2 } },
+                 look = { edgeArt = "chain", banner = "gem", divider = "diamond", watermark = "star", bgStyle = "scales", cornerArt = "plate", crest = "wings", edgeFx = "glow", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1.2 } },
     oak      = { name = "Oak lodge (art)",      bg = { 0.52, 0.36, 0.22 }, edge = { 0.88, 0.70, 0.36 },
-                 look = { bgStyle = "wood", cornerArt = "filigree", crest = "none", edgeFx = "bevel", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
+                 look = { edgeArt = "rope", banner = "plaque", divider = "beads", watermark = "compass", bgStyle = "wood", cornerArt = "filigree", crest = "none", edgeFx = "bevel", flair = "gilded", depth = 0.4, bgNoTint = false, texScale = 1 } },
 }
 local PRESET_ORDER = { "gold", "midnight", "slate", "forest", "crimson", "ember", "void", "frost", "mono", "light",
     "arcane", "forge", "glade", "tome", "runestone", "court", "dragon", "oak" }
@@ -284,6 +284,7 @@ local function Defaults()
         btnTextColor = { 1, 0.82, 0.2 }, btnGloss = false, btnNoTint = false,
         follow = true, edgeFx = "none", depth = 0, topLight = 0, texScale = 1, flair = "gilded", pulse = false,
         cornerArt = "none", crest = "none", artSize = 40,
+        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10,
     }
 end
 
@@ -736,7 +737,7 @@ local function Fx(bg, s, inset, e)
         t:ClearAllPoints()
         t:SetTexture(mediaDir .. "Art_Crest_" .. crest)
         t:SetTexCoord(0, 1, 0, 1)
-        t:SetPoint("CENTER", bg, "TOP", 0, 1)
+        t:SetPoint("BOTTOM", bg, "TOP", 0, -3)
         t:SetSize(sz * 3.2, sz * 0.8)
         t:SetVertexColor(e[1], e[2], e[3], 1)
         t:Show()
@@ -760,6 +761,110 @@ local function Fx(bg, s, inset, e)
         for i = fx.edgeFrom or 1, fx.edgeTo or 0 do if fx.t[i] then fx.t[i]:SetAlpha(1) end end
     end
     for i = n + 1, #fx.t do fx.t[i]:Hide() end
+end
+
+-- more artwork: a strip along every edge, a banner behind the title, a divider under it and a faint emblem in the middle.
+-- Everything is optional and tinted with the border color.
+local function Art2(bg, s, inset, e, spec, frame)
+    local a = bg.lookArt
+    if not a then a = {} bg.lookArt = a end
+    for _, t in pairs(a) do t:Hide() end
+    local m = (cfg and cfg.media) or ""
+    local function Clamp(v, lo, hi, d) v = tonumber(v) or d return math.max(lo, math.min(hi, v)) end
+    local function Tex(key, layer, sub)
+        local t = a[key]
+        if not t then t = bg:CreateTexture(nil, layer, nil, sub) a[key] = t end
+        t:ClearAllPoints()
+        t:SetTexCoord(0, 1, 0, 1)
+        t:SetVertexColor(e[1], e[2], e[3], 1)
+        t:SetAlpha(1)
+        return t
+    end
+    local function Grad(t, r, g, b, lowA, highA)
+        if t.SetGradient and CreateColor then pcall(t.SetGradient, t, "HORIZONTAL", CreateColor(r, g, b, lowA), CreateColor(r, g, b, highA))
+        elseif t.SetGradientAlpha then pcall(t.SetGradientAlpha, t, "HORIZONTAL", r, g, b, lowA, r, g, b, highA) end
+    end
+    local hh = s.header and Clamp(s.headerSize, 16, 44, 26) or 26
+
+    -- a strip of ornament along each edge
+    local ea = s.edgeArt or "none"
+    if ea ~= "none" then
+        local th = Clamp(s.artEdge, 6, 24, 10)
+        local o = inset + 1
+        local top = Tex("eT", "OVERLAY", 1)
+        top:SetTexture(m .. "Art_Edge_" .. ea .. "_h")
+        top:SetPoint("TOPLEFT", bg, "TOPLEFT", o, -o) top:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -o, -o) top:SetHeight(th)
+        pcall(top.SetHorizTile, top, true) top:Show()
+        local bot = Tex("eB", "OVERLAY", 1)
+        bot:SetTexture(m .. "Art_Edge_" .. ea .. "_h") bot:SetTexCoord(0, 1, 1, 0)
+        bot:SetPoint("BOTTOMLEFT", bg, "BOTTOMLEFT", o, o) bot:SetPoint("BOTTOMRIGHT", bg, "BOTTOMRIGHT", -o, o) bot:SetHeight(th)
+        pcall(bot.SetHorizTile, bot, true) bot:Show()
+        local lf = Tex("eL", "OVERLAY", 1)
+        lf:SetTexture(m .. "Art_Edge_" .. ea .. "_v")
+        lf:SetPoint("TOPLEFT", bg, "TOPLEFT", o, -o - th) lf:SetPoint("BOTTOMLEFT", bg, "BOTTOMLEFT", o, o + th) lf:SetWidth(th)
+        pcall(lf.SetVertTile, lf, true) lf:Show()
+        local rt = Tex("eR", "OVERLAY", 1)
+        rt:SetTexture(m .. "Art_Edge_" .. ea .. "_v") rt:SetTexCoord(1, 0, 0, 1)
+        rt:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -o, -o - th) rt:SetPoint("BOTTOMRIGHT", bg, "BOTTOMRIGHT", -o, o + th) rt:SetWidth(th)
+        pcall(rt.SetVertTile, rt, true) rt:Show()
+    end
+
+    -- a banner behind the title text
+    local bandH = 0
+    local bn = s.banner or "none"
+    if bn ~= "none" and spec and spec.title then
+        local fs = spec.title(frame)
+        if fs and fs.GetStringWidth then
+            bandH = Clamp(hh + 6, 24, 44, 32)
+            local w = math.max(60, (fs:GetStringWidth() or 0) + 24)
+            local mid = Tex("bM", "ARTWORK", 2)
+            mid:SetTexture(m .. "Art_Banner_" .. bn .. "_M")
+            mid:SetPoint("CENTER", fs, "CENTER", 0, 0) mid:SetSize(w, bandH) mid:Show()
+            local l = Tex("bL", "ARTWORK", 2)
+            l:SetTexture(m .. "Art_Banner_" .. bn .. "_L")
+            l:SetPoint("RIGHT", mid, "LEFT", 0, 0) l:SetSize(bandH, bandH) l:Show()
+            local r = Tex("bR", "ARTWORK", 2)
+            r:SetTexture(m .. "Art_Banner_" .. bn .. "_L") r:SetTexCoord(1, 0, 0, 1)
+            r:SetPoint("LEFT", mid, "RIGHT", 0, 0) r:SetSize(bandH, bandH) r:Show()
+        end
+    end
+
+    -- a divider line with an ornament in the middle, under the title
+    local dv = s.divider or "none"
+    if dv ~= "none" then
+        local y = -(inset + math.max(hh, bandH) + 6)
+        local c = Tex("dC", "ARTWORK", 3)
+        c:SetTexture(m .. "Art_Divider_" .. dv)
+        c:SetPoint("TOP", bg, "TOP", 0, y) c:SetSize(64, 16) c:Show()
+        local l = Tex("dL", "ARTWORK", 3)
+        l:SetTexture(WHITE) l:SetVertexColor(e[1], e[2], e[3], 1)
+        l:SetPoint("RIGHT", c, "LEFT", 4, 0) l:SetPoint("LEFT", bg, "LEFT", inset + 14, 0) l:SetHeight(1.4)
+        l:ClearAllPoints() l:SetPoint("TOPRIGHT", c, "LEFT", 4, 0.7) l:SetPoint("TOPLEFT", bg, "TOPLEFT", inset + 14, y - 7.3)
+        Grad(l, e[1], e[2], e[3], 0, 0.9) l:Show()
+        local r = Tex("dR", "ARTWORK", 3)
+        r:SetTexture(WHITE) r:SetVertexColor(e[1], e[2], e[3], 1)
+        r:SetPoint("TOPLEFT", c, "RIGHT", -4, 0.7) r:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -(inset + 14), y - 7.3)
+        Grad(r, e[1], e[2], e[3], 0.9, 0) r:Show()
+    end
+
+    -- a faint emblem in the middle of the window
+    local wm = s.watermark or "none"
+    if wm ~= "none" then
+        local t = Tex("wm", "BACKGROUND", 5)
+        t:SetTexture(m .. "Art_Mark_" .. wm)
+        local function Fit()
+            local w, h = bg:GetWidth() or 0, bg:GetHeight() or 0
+            local side = math.max(48, math.min(w > 0 and w or 240, h > 0 and h or 240) * 0.62)
+            t:SetSize(side, side)
+        end
+        t:SetPoint("CENTER", bg, "CENTER", 0, -8)
+        Fit()
+        if not bg.lookWmHook and bg.HookScript then bg.lookWmHook = true bg:HookScript("OnSizeChanged", function() if a.wm and a.wm:IsShown() then pcall(function()
+            local w, h = bg:GetWidth() or 0, bg:GetHeight() or 0
+            local side = math.max(48, math.min(w, h) * 0.62) a.wm:SetSize(side, side) end) end end) end
+        t:SetAlpha(Clamp(s.wmAlpha, 0.02, 0.5, 0.10))
+        t:Show()
+    end
 end
 
 local function ApplyOne(spec)
@@ -839,6 +944,7 @@ local function ApplyOne(spec)
         elseif hd then
             hd.fill:Hide() hd.line:Hide()
         end
+        Safe(Art2, bg, s, inset, e, spec, frame)
         if spec.title then
             local fs = spec.title(frame)
             if fs and fs.SetTextColor then
@@ -1343,15 +1449,27 @@ local SECTIONS = {
           names = { none = "Plain", soft = "Soft (inner shadow and faint glow)", bevel = "Bevel (raised)", double = "Double line", glow = "Glow" } },
         { key = "flair", kind = "cycle", label = "Flair (gold trim)", values = { "none", "gilded", "royal" },
           names = { none = "None", gilded = "Gilded line and studs", royal = "Royal: double line and diamond corners" } },
-        { key = "cornerArt", kind = "cycle", label = "Corner artwork", values = { "none", "filigree", "vine", "rune", "plate", "arcane" },
-          names = { none = "None", filigree = "Gilded filigree", vine = "Vines and leaves", rune = "Carved runes", plate = "Iron corner plates", arcane = "Arcane sigil" } },
-        { key = "crest", kind = "cycle", label = "Crest on the top edge", values = { "none", "wings", "gem", "scroll", "crown" },
-          names = { none = "None", wings = "Winged", gem = "Jeweled", scroll = "Scrollwork", crown = "Crown" } },
-        { key = "artSize", kind = "slider", label = "Artwork size", min = 16, max = 96, step = 2 },
         { key = "pulse", kind = "check", label = "Pulse the flair and the edge finish" },
         { key = "edgeSize", kind = "slider", label = "Line thickness", min = 1, max = 8, step = 1 },
         { key = "header", kind = "check", label = "Header bar behind the title" },
         { key = "headerSize", kind = "slider", label = "Header bar height", min = 16, max = 44, step = 1 },
+    } },
+    { id = "art", title = "Artwork (all optional)", rows = {
+        { key = "edgeArt", kind = "cycle", label = "Ornament along the edges", values = { "none", "rope", "chain", "beads", "runes", "vine" },
+          names = { none = "None", rope = "Twisted rope", chain = "Iron chain", beads = "Pearl beads", runes = "Carved runes", vine = "Creeping vine" } },
+        { key = "artEdge", kind = "slider", label = "Edge ornament thickness", min = 6, max = 24, step = 1 },
+        { key = "cornerArt", kind = "cycle", label = "Corner pieces", values = { "none", "filigree", "vine", "rune", "plate", "arcane" },
+          names = { none = "None", filigree = "Gilded filigree", vine = "Vines and leaves", rune = "Carved runes", plate = "Iron corner plates", arcane = "Arcane sigil" } },
+        { key = "crest", kind = "cycle", label = "Crest above the top edge", values = { "none", "wings", "gem", "scroll", "crown" },
+          names = { none = "None", wings = "Winged", gem = "Jeweled", scroll = "Scrollwork", crown = "Crown" } },
+        { key = "banner", kind = "cycle", label = "Banner behind the title", values = { "none", "ribbon", "plaque", "scroll", "gem" },
+          names = { none = "None", ribbon = "Ribbon", plaque = "Riveted plaque", scroll = "Scroll", gem = "Jeweled plate" } },
+        { key = "divider", kind = "cycle", label = "Divider under the title", values = { "none", "flourish", "beads", "diamond" },
+          names = { none = "None", flourish = "Flourish", beads = "Beads", diamond = "Diamonds" } },
+        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "compass", "shield", "laurel", "star", "rings" },
+          names = { none = "None", compass = "Compass rose", shield = "Shield", laurel = "Laurel wreath", star = "Eight-point star", rings = "Runic rings" } },
+        { key = "wmAlpha", kind = "slider", label = "Emblem strength", min = 0.02, max = 0.5, step = 0.02, fmt = "%.2f" },
+        { key = "artSize", kind = "slider", label = "Corner and crest size", min = 16, max = 96, step = 2 },
     } },
     { id = "buttons", title = "Buttons", rows = {
         { key = "buttons", kind = "check", label = "Restyle the buttons in this window" },
