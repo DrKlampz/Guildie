@@ -1,6 +1,7 @@
 # Guildie
 
 ## Unreleased
+- Escape now closes the map pin options window instead of opening the game menu.
 - The "Pulse the flair" option now also pulses the edge finish (soft, bevel, double line and glow), not just the corner studs.
 
 ## v1.15.3
