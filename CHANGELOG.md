@@ -1,5 +1,8 @@
 # Guildie
 
+## v1.15.7
+- Every piece of artwork (corners, crest, edge pattern, title banner, divider, middle emblem) can now have its own color. New "Your file" emblem slots show your own faction, race and city images from the Media folder.
+
 ## v1.15.6
 - More emblems: religious, Wiccan, Pagan, Druid, Satanic and occult symbols from many faiths, and the names are tidied.
 - The artwork can have a color of its own (Artwork section): corners, crest, edges, banner, divider and the middle emblem.

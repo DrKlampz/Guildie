@@ -470,7 +470,9 @@ local function Defaults()
         btnTextColor = { 1, 0.82, 0.2 }, btnGloss = false, btnNoTint = false,
         follow = true, edgeFx = "none", depth = 0, topLight = 0, texScale = 1, flair = "gilded", pulse = false,
         cornerArt = "none", crest = "none", artSize = 40,
-        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10, artCustom = false, artColor = { 0.88, 0.69, 0.29 }, closeStyle = "default", closeSize = 22, closeColor = { 0.88, 0.69, 0.29 },
+        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10, artCustom = false, artColor = { 0.88, 0.69, 0.29 },
+        cornerCustom = false, cornerColor = { 0.88, 0.69, 0.29 }, crestCustom = false, crestColor = { 0.88, 0.69, 0.29 }, edgeCustom = false, edgeArtColor = { 0.88, 0.69, 0.29 },
+        bannerCustom = false, bannerColor = { 0.88, 0.69, 0.29 }, dividerCustom = false, dividerColor = { 0.88, 0.69, 0.29 }, emblemCustom = false, emblemColor = { 0.88, 0.69, 0.29 }, closeStyle = "default", closeSize = 22, closeColor = { 0.88, 0.69, 0.29 },
         gradMode = "none", gradFlip = false, gradA = { 0.30, 0.18, 0.55 }, gradB = { 0.04, 0.02, 0.10 }, gradAlphaA = 0.9, gradAlphaB = 0.9, gradOver = "over",
     }
 end
@@ -816,6 +818,16 @@ local function ApplyButtons(frame, s, on, spec)
 end
 
 -- extra polish drawn over the background: inner shadow (depth), light from above, and finer border styles
+-- every piece of artwork can have a color of its own; else the shared artwork color; else the border color
+local function PCol(s, part, e)
+    local ck = (part == "edge") and "edgeArtColor" or (part and part .. "Color")
+    if part and s[part .. "Custom"] and type(s[ck]) == "table" then return s[ck] end
+    if s.artCustom and type(s.artColor) == "table" then return s.artColor end
+    return e
+end
+local PART_OF = { eT = "edge", eB = "edge", eL = "edge", eR = "edge", bM = "banner", bL = "banner", bR = "banner",
+                  dC = "divider", dL = "divider", dR = "divider", wm = "emblem" }
+
 local function Fx(bg, s, inset, e)
     local fx = bg.lookFx
     if not fx then fx = { t = {} } bg.lookFx = fx end
@@ -931,7 +943,8 @@ local function Fx(bg, s, inset, e)
             t:SetTexCoord(c[4], c[5], c[6], c[7])
             t:SetPoint(c[1], bg, c[1], c[2], c[3])
             t:SetSize(sz, sz)
-            t:SetVertexColor(e[1], e[2], e[3], 1)
+            local cc = PCol(s, "corner", e)
+            t:SetVertexColor(cc[1], cc[2], cc[3], 1)
             t:Show()
         end
     end
@@ -944,7 +957,8 @@ local function Fx(bg, s, inset, e)
         t:SetTexCoord(0, 1, 0, 1)
         t:SetPoint("BOTTOM", bg, "TOP", 0, -3)
         t:SetSize(sz * 3.2, sz * 0.8)
-        t:SetVertexColor(e[1], e[2], e[3], 1)
+        local cc = PCol(s, "crest", e)
+        t:SetVertexColor(cc[1], cc[2], cc[3], 1)
         t:Show()
     end
     -- optional slow pulse of the studs and the edge finish
@@ -971,6 +985,10 @@ end
 -- more artwork: a strip along every edge, a banner behind the title, a divider under it and a faint emblem in the middle.
 -- Everything is optional and tinted with the border color.
 local WM_ICONS = {}
+-- emblems you supply yourself: put Emblem_<Name>.tga (or .blp) in the add-on's Media folder and pick "Your file: <Name>"
+local MY_EMBLEMS = { "Horde", "Alliance", "Human", "Orc", "Dwarf", "NightElf", "Undead", "Tauren", "Gnome", "Troll", "BloodElf", "Draenei",
+    "Stormwind", "Orgrimmar", "Ironforge", "Darnassus", "Undercity", "ThunderBluff", "Silvermoon", "Exodar", "Shattrath", "Dalaran" }
+local function MyEmblem(v) return type(v) == "string" and v:sub(1, 3) == "my_" and v:sub(4) or nil end
 local WM_ORDER = {}
 local WM_FAITH = { { "cross", "Cross" }, { "celtic", "Celtic cross" }, { "hexagram", "Star of David" }, { "crescent", "Crescent and star" },
     { "dharma", "Wheel of Dharma" }, { "yinyang", "Yin and yang" }, { "ankh", "Ankh" }, { "lotus", "Lotus" }, { "hamsa", "Hamsa" },
@@ -1071,7 +1089,8 @@ local function Art2(bg, s, inset, e, spec, frame)
         if not t then t = bg:CreateTexture(nil, layer, nil, sub) a[key] = t end
         t:ClearAllPoints()
         t:SetTexCoord(0, 1, 0, 1)
-        t:SetVertexColor(e[1], e[2], e[3], 1)
+        local pc = PCol(s, PART_OF[key], e)
+        t:SetVertexColor(pc[1], pc[2], pc[3], 1)
         t:SetAlpha(1)
         return t
     end
@@ -1150,14 +1169,15 @@ local function Art2(bg, s, inset, e, spec, frame)
         c:SetPoint("TOP", bg, "TOP", 0, y) c:SetSize(tight and 48 or 64, tight and 12 or 16) c:Show()
         local dh = tight and 12 or 16
         local l = Tex("dL", "ARTWORK", 3)
-        l:SetTexture(WHITE) l:SetVertexColor(e[1], e[2], e[3], 1)
+        local dc = PCol(s, "divider", e)
+        l:SetTexture(WHITE) l:SetVertexColor(dc[1], dc[2], dc[3], 1)
         l:SetPoint("RIGHT", c, "LEFT", 4, 0) l:SetPoint("LEFT", bg, "LEFT", inset + 14, 0) l:SetHeight(1.4)
         l:ClearAllPoints() l:SetPoint("TOPRIGHT", c, "LEFT", 4, 0.7) l:SetPoint("TOPLEFT", bg, "TOPLEFT", inset + 14, y - dh / 2 + 0.7)
-        Grad(l, e[1], e[2], e[3], 0, 0.9) l:Show()
+        Grad(l, dc[1], dc[2], dc[3], 0, 0.9) l:Show()
         local r = Tex("dR", "ARTWORK", 3)
-        r:SetTexture(WHITE) r:SetVertexColor(e[1], e[2], e[3], 1)
+        r:SetTexture(WHITE) r:SetVertexColor(dc[1], dc[2], dc[3], 1)
         r:SetPoint("TOPLEFT", c, "RIGHT", -4, 0.7) r:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -(inset + 14), y - dh / 2 + 0.7)
-        Grad(r, e[1], e[2], e[3], 0.9, 0) r:Show()
+        Grad(r, dc[1], dc[2], dc[3], 0.9, 0) r:Show()
     end
 
     -- a faint emblem in the middle of the window
@@ -1177,7 +1197,11 @@ local function Art2(bg, s, inset, e, spec, frame)
             if c then t:SetTexCoord(c[1], c[2], c[3], c[4]) end
             t:SetVertexColor(1, 1, 1, 1)
         end
-        if WM_ICONS[wm] then
+        if MyEmblem(wm) then
+            t:SetTexture(m .. "Emblem_" .. MyEmblem(wm)) t:SetTexCoord(0, 1, 0, 1)
+            local mc = (s.emblemCustom and type(s.emblemColor) == "table") and s.emblemColor or { 1, 1, 1 }
+            t:SetVertexColor(mc[1], mc[2], mc[3], 1)
+        elseif WM_ICONS[wm] then
             t:SetTexture(WM_ICONS[wm][1])
             t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1)
         elseif wm == "crestA" or wm == "crestH" then
@@ -1224,7 +1248,7 @@ local function Art2(bg, s, inset, e, spec, frame)
                 end
             end
             t:SetTexture(m .. "Art_Mark_" .. nm)
-            t:SetTexCoord(0, 1, 0, 1) t:SetVertexColor(e[1], e[2], e[3], 1)
+            t:SetTexCoord(0, 1, 0, 1) local ec = PCol(s, "emblem", e) t:SetVertexColor(ec[1], ec[2], ec[3], 1)
         end
         local function Fit()
             local w, h = bg:GetWidth() or 0, bg:GetHeight() or 0
@@ -1784,7 +1808,9 @@ local function SetPreview(rowKey, v, menuFrame)
     if tok == "" then tok = nil end
     local own = (v == "mine" and (tok or "star")) or (v == "myspec" and ((tok or "star") .. "_1")) or v
     if rowKey == "watermark" then
-        if WM_ICONS[v] then
+        if MyEmblem(v) then
+            t:SetTexture(((cfg and cfg.media) or "") .. "Emblem_" .. MyEmblem(v)) t:SetTexCoord(0, 1, 0, 1) t:SetVertexColor(1, 1, 1, 1)
+        elseif WM_ICONS[v] then
             t:SetTexture(WM_ICONS[v][1]) t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1)
         elseif v == "crestA" or v == "crestH" then
             t:SetTexture(v == "crestA" and "Interface\\PVPFrame\\PVP-Currency-Alliance" or "Interface\\PVPFrame\\PVP-Currency-Horde") t:SetVertexColor(1, 1, 1, 1)
@@ -1989,6 +2015,18 @@ local SECTIONS = {
                     mage = "Mage", warlock = "Warlock", druid = "Druid" } },
         { key = "artCustom", kind = "check", label = "Choose the artwork color" },
         { key = "artColor", kind = "color", label = "Artwork color (all the art in this window)" },
+        { key = "cornerCustom", kind = "check", label = "Corners: own color" },
+        { key = "cornerColor", kind = "color", label = "Corner color" },
+        { key = "crestCustom", kind = "check", label = "Crest: own color" },
+        { key = "crestColor", kind = "color", label = "Crest color" },
+        { key = "edgeCustom", kind = "check", label = "Edge pattern: own color" },
+        { key = "edgeArtColor", kind = "color", label = "Edge pattern color" },
+        { key = "bannerCustom", kind = "check", label = "Title banner: own color" },
+        { key = "bannerColor", kind = "color", label = "Title banner color" },
+        { key = "dividerCustom", kind = "check", label = "Divider: own color" },
+        { key = "dividerColor", kind = "color", label = "Divider color" },
+        { key = "emblemCustom", kind = "check", label = "Middle emblem: own color" },
+        { key = "emblemColor", kind = "color", label = "Middle emblem color" },
         { key = "wmAlpha", kind = "slider", label = "Emblem strength", min = 0.02, max = 0.5, step = 0.02, fmt = "%.2f" },
         { key = "artSize", kind = "slider", label = "Corner and crest size", min = 16, max = 96, step = 2 },
     } },
@@ -2022,6 +2060,7 @@ do   -- add the race and city sigils to the emblem list
         for _, row in ipairs(sec.rows or {}) do
             if row.key == "watermark" then
                 for _, k in ipairs(WM_ORDER) do row.values[#row.values + 1] = k row.names[k] = WM_ICONS[k][2] end
+                for _, n in ipairs(MY_EMBLEMS) do row.values[#row.values + 1] = "my_" .. n row.names["my_" .. n] = "Your file: " .. n end
                 for _, f in ipairs(WM_FAITH) do row.values[#row.values + 1] = f[1] row.names[f[1]] = f[2] .. "" end
             end
         end
