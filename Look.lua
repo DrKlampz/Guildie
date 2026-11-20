@@ -470,7 +470,7 @@ local function Defaults()
         btnTextColor = { 1, 0.82, 0.2 }, btnGloss = false, btnNoTint = false,
         follow = true, edgeFx = "none", depth = 0, topLight = 0, texScale = 1, flair = "gilded", pulse = false,
         cornerArt = "none", crest = "none", artSize = 40,
-        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10,
+        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10, artCustom = false, artColor = { 0.88, 0.69, 0.29 }, closeStyle = "default", closeSize = 22, closeColor = { 0.88, 0.69, 0.29 },
         gradMode = "none", gradFlip = false, gradA = { 0.30, 0.18, 0.55 }, gradB = { 0.04, 0.02, 0.10 }, gradAlphaA = 0.9, gradAlphaB = 0.9, gradOver = "over",
     }
 end
@@ -970,30 +970,97 @@ end
 
 -- more artwork: a strip along every edge, a banner behind the title, a divider under it and a faint emblem in the middle.
 -- Everything is optional and tinted with the border color.
--- the game's own race and city icons, pointed at by path (nothing is copied)
 local WM_ICONS = {}
 local WM_ORDER = {}
-do
-    local races = { { "human", "Human", "Human", "Stormwind" }, { "dwarf", "Dwarf", "Dwarf", "Ironforge" }, { "nightelf", "Night elf", "NightElf", "Darnassus" },
-        { "gnome", "Gnome", "Gnome", "Gnomeregan" }, { "draenei", "Draenei", "Draenei", "The Exodar" }, { "orc", "Orc", "Orc", "Orgrimmar" },
-        { "undead", "Undead", "Scourge", "Undercity" }, { "tauren", "Tauren", "Tauren", "Thunder Bluff" }, { "troll", "Troll", "Troll", "Darkspear" },
-        { "bloodelf", "Blood elf", "BloodElf", "Silvermoon" } }
-    for _, r in ipairs(races) do
-        local k = "race_" .. r[1]
-        WM_ICONS[k] = { "Interface\\Icons\\INV_Misc_Tournaments_symbol_" .. r[3], r[2] .. " sigil (the game's icon)" }
-        WM_ORDER[#WM_ORDER + 1] = k
-    end
-    for _, r in ipairs(races) do
-        local k = "city_" .. r[1]
-        WM_ICONS[k] = { "Interface\\Icons\\INV_Misc_Tournaments_banner_" .. r[3], r[4] .. " banner (the game's icon)" }
-        WM_ORDER[#WM_ORDER + 1] = k
-    end
-end
 local WM_FAITH = { { "cross", "Cross" }, { "celtic", "Celtic cross" }, { "hexagram", "Star of David" }, { "crescent", "Crescent and star" },
     { "dharma", "Wheel of Dharma" }, { "yinyang", "Yin and yang" }, { "ankh", "Ankh" }, { "lotus", "Lotus" }, { "hamsa", "Hamsa" },
-    { "triquetra", "Triquetra" }, { "torii", "Torii gate" } }
+    { "triquetra", "Triquetra" }, { "torii", "Torii gate" },
+    { "om", "Om" }, { "khanda", "Khanda" }, { "bahai", "Baha'i star" }, { "menorah", "Menorah" }, { "pentacle", "Pentacle" }, { "mjolnir", "Mjolnir" },
+    { "trishula", "Trishula" }, { "orthodox", "Orthodox cross" }, { "fish", "Ichthys (fish)" }, { "chirho", "Chi-Rho" }, { "hizb", "Rub el Hizb" },
+    { "horus", "Eye of Horus" }, { "triplemoon", "Triple moon" },
+    { "ikonkar", "Ik Onkar (Sikh)" }, { "faravahar", "Faravahar (Zoroastrian)" }, { "bagua", "Bagua (Taoist)" },
+    { "sephirot", "Tree of Life (Kabbalah)" }, { "druze", "Druze star" }, { "yazidi", "Yazidi sun" }, { "medicine", "Medicine wheel" },
+    { "invpent", "Inverted pentagram" }, { "baphomet", "Sigil of Baphomet" }, { "leviathan", "Leviathan cross" }, { "hornedgod", "Horned god (Wicca)" },
+    { "awen", "Awen (Druid)" }, { "hecate", "Hecate's wheel" }, { "unicursal", "Unicursal hexagram (Thelema)" }, { "chaos", "Chaos star" }, { "ouroboros", "Ouroboros" } }
+
+-- the close button in a window's top right corner: the game's own, or one of ours in a color and size of your choice
+local function StyleClose(spec, frame, s, e)
+    local b = spec and spec.close and spec.close(frame)
+    if not b and frame then   -- no close button named: find the game's own X among the window's children
+        b = frame.lkClose
+        if not b and frame.GetChildren then
+            for _, ch in ipairs({ frame:GetChildren() }) do
+                if ch.GetObjectType and ch:GetObjectType() == "Button" and ch.GetNormalTexture then
+                    local nt = ch:GetNormalTexture()
+                    local tp = nt and nt.GetTexture and nt:GetTexture()
+                    if type(tp) == "string" and tp:lower():find("minimizebutton", 1, true) then b = ch frame.lkClose = ch break end
+                end
+            end
+        end
+    end
+    if not (b and b.GetNormalTexture) then return end
+    if not b.lkSaved then
+        local a, r, rp, x, y = b:GetPoint(1)
+        b.lkSaved = { w = b:GetWidth(), h = b:GetHeight(), pt = a and { a, r, rp, x, y } or nil }
+    end
+    local st = s.closeStyle or "default"
+    local function Blizz(on)
+        for _, g in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
+            local t = b[g] and b[g](b)
+            if t then t:SetAlpha(on and 1 or 0) end
+        end
+    end
+    if st == "default" or st == "none" then
+        Blizz(st == "default")
+        if b.lkBox then b.lkBox:Hide() end
+        if b.lkX then b.lkX:Hide() end
+        b:SetSize(b.lkSaved.w, b.lkSaved.h)
+        if b.lkSaved.pt then local p = b.lkSaved.pt b:ClearAllPoints() b:SetPoint(p[1], p[2], p[3], p[4], p[5]) end
+        b:SetAlpha(st == "none" and 0 or 1)
+        return
+    end
+    b:SetAlpha(1)
+    Blizz(false)
+    local c = type(s.closeColor) == "table" and s.closeColor or e
+    local sz = math.max(14, math.min(40, tonumber(s.closeSize) or 22))
+    b:SetSize(sz, sz)
+    b:ClearAllPoints() b:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -4)
+    if not b.lkBox then
+        b.lkBox = b:CreateTexture(nil, "BACKGROUND") b.lkBox:SetTexture(WHITE) b.lkBox:SetAllPoints(b)
+        b.lkIn = b:CreateTexture(nil, "BORDER") b.lkIn:SetTexture(WHITE)
+        b.lkIn:SetPoint("TOPLEFT", 1, -1) b.lkIn:SetPoint("BOTTOMRIGHT", -1, 1)
+        b.lkX = b:CreateFontString(nil, "OVERLAY")
+        b.lkX:SetPoint("CENTER", 0, 0)
+        b.lkOver = false
+        b:HookScript("OnEnter", function() b.lkOver = true if b.lkPaint then b.lkPaint() end end)
+        b:HookScript("OnLeave", function() b.lkOver = false if b.lkPaint then b.lkPaint() end end)
+    end
+    b.lkX:SetFont("Fonts\\FRIZQT__.TTF", math.floor(sz * 0.72), "OUTLINE")
+    b.lkX:SetText("X")
+    b.lkPaint = function()
+        local hot = b.lkOver
+        local k = hot and 1 or 0.85
+        if st == "boxed" then
+            b.lkBox:SetVertexColor(c[1], c[2], c[3], 1) b.lkBox:Show()
+            b.lkIn:SetVertexColor(hot and 0.22 or 0.08, hot and 0.2 or 0.08, hot and 0.2 or 0.1, 1) b.lkIn:Show()
+            b.lkX:SetTextColor(c[1], c[2], c[3])
+        elseif st == "plain" then
+            b.lkBox:Hide() b.lkIn:Hide()
+            b.lkX:SetTextColor(hot and 1 or c[1], hot and 1 or c[2], hot and 1 or c[3])
+        elseif st == "red" then
+            b.lkBox:SetVertexColor(hot and 0.85 or 0.6, 0.12, 0.12, 1) b.lkBox:Show() b.lkIn:Hide()
+            b.lkX:SetTextColor(1, 1, 1)
+        else   -- filled
+            b.lkBox:SetVertexColor(c[1] * k, c[2] * k, c[3] * k, 1) b.lkBox:Show() b.lkIn:Hide()
+            b.lkX:SetTextColor(0.08, 0.06, 0.04)
+        end
+        b.lkX:Show()
+    end
+    b.lkPaint()
+end
 
 local function Art2(bg, s, inset, e, spec, frame)
+    if s.artCustom and type(s.artColor) == "table" then e = s.artColor end   -- the artwork can have a color of its own
     local a = bg.lookArt
     if not a then a = {} bg.lookArt = a end
     for _, t in pairs(a) do t:Hide() end
@@ -1076,22 +1143,29 @@ local function Art2(bg, s, inset, e, spec, frame)
     local dv = s.divider or "none"
     if dv ~= "none" then
         local y = -(inset + math.max(hh, bandH) + 6)
+        local tight = spec and tonumber(spec.dividerY)   -- a window with controls under its title bar says where the rule fits
+        if tight then y = tight end
         local c = Tex("dC", "ARTWORK", 3)
         c:SetTexture(m .. "Art_Divider_" .. dv)
-        c:SetPoint("TOP", bg, "TOP", 0, y) c:SetSize(64, 16) c:Show()
+        c:SetPoint("TOP", bg, "TOP", 0, y) c:SetSize(tight and 48 or 64, tight and 12 or 16) c:Show()
+        local dh = tight and 12 or 16
         local l = Tex("dL", "ARTWORK", 3)
         l:SetTexture(WHITE) l:SetVertexColor(e[1], e[2], e[3], 1)
         l:SetPoint("RIGHT", c, "LEFT", 4, 0) l:SetPoint("LEFT", bg, "LEFT", inset + 14, 0) l:SetHeight(1.4)
-        l:ClearAllPoints() l:SetPoint("TOPRIGHT", c, "LEFT", 4, 0.7) l:SetPoint("TOPLEFT", bg, "TOPLEFT", inset + 14, y - 7.3)
+        l:ClearAllPoints() l:SetPoint("TOPRIGHT", c, "LEFT", 4, 0.7) l:SetPoint("TOPLEFT", bg, "TOPLEFT", inset + 14, y - dh / 2 + 0.7)
         Grad(l, e[1], e[2], e[3], 0, 0.9) l:Show()
         local r = Tex("dR", "ARTWORK", 3)
         r:SetTexture(WHITE) r:SetVertexColor(e[1], e[2], e[3], 1)
-        r:SetPoint("TOPLEFT", c, "RIGHT", -4, 0.7) r:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -(inset + 14), y - 7.3)
+        r:SetPoint("TOPLEFT", c, "RIGHT", -4, 0.7) r:SetPoint("TOPRIGHT", bg, "TOPRIGHT", -(inset + 14), y - dh / 2 + 0.7)
         Grad(r, e[1], e[2], e[3], 0.9, 0) r:Show()
     end
 
     -- a faint emblem in the middle of the window
     local wm = s.watermark or "none"
+    do   -- the game-icon emblems are gone; a look saved with one wears the class emblem instead
+        local gone = { crestA = 1, crestH = 1, kirintor = 1, faction = 1, classicon = 1, specicon = 1 }
+        if gone[wm] or wm:sub(1, 5) == "race_" or wm:sub(1, 5) == "city_" then wm = "mine" end
+    end
     if wm ~= "none" then
         local t = Tex("wm", "BACKGROUND", 5)
         local tok
@@ -1150,6 +1224,7 @@ local function Art2(bg, s, inset, e, spec, frame)
                 end
             end
             t:SetTexture(m .. "Art_Mark_" .. nm)
+            t:SetTexCoord(0, 1, 0, 1) t:SetVertexColor(e[1], e[2], e[3], 1)
         end
         local function Fit()
             local w, h = bg:GetWidth() or 0, bg:GetHeight() or 0
@@ -1312,6 +1387,7 @@ local function ApplyOne(spec)
             hd.fill:Hide() hd.line:Hide()
         end
         Safe(Art2, bg, s, inset, e, spec, frame)
+        Safe(StyleClose, spec, frame, s, e)
         if spec.title then
             local fs = spec.title(frame)
             if fs and fs.SetTextColor then
@@ -1678,6 +1754,7 @@ local function PickColor(t, key, done)
 end
 
 local menu, catcher
+local preview   -- the hover preview beside a list (declared early so CloseMenu can hide it)
 local function CloseMenu()
     if menu then menu:Hide() end
     if catcher then catcher:Hide() end
@@ -1685,7 +1762,6 @@ local function CloseMenu()
 end
 
 -- a little preview beside the list: point at an entry and see what it looks like
-local preview
 local PREVIEW_ROWS = { watermark = true, cornerArt = true, crest = true, edgeArt = true, banner = true, divider = true }
 local function SetPreview(rowKey, v, menuFrame)
     if not PREVIEW_ROWS[rowKey] or v == nil or v == "none" then if preview then preview:Hide() end return end
@@ -1905,12 +1981,14 @@ local SECTIONS = {
           names = { none = "None", ribbon = "Ribbon", plaque = "Riveted plaque", scroll = "Scroll", gem = "Jeweled plate" } },
         { key = "divider", kind = "cycle", label = "Divider under the title", values = { "none", "flourish", "beads", "diamond" },
           names = { none = "None", flourish = "Flourish", beads = "Beads", diamond = "Diamonds" } },
-        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "myspec", "warrior_1", "warrior_2", "warrior_3", "paladin_1", "paladin_2", "paladin_3", "hunter_1", "hunter_2", "hunter_3", "rogue_1", "rogue_2", "rogue_3", "priest_1", "priest_2", "priest_3", "shaman_1", "shaman_2", "shaman_3", "mage_1", "mage_2", "mage_3", "warlock_1", "warlock_2", "warlock_3", "druid_1", "druid_2", "druid_3", "classicon", "specicon", "faction", "crestA", "crestH", "kirintor", "compass", "shield", "laurel", "star", "rings", "pinnacle", "sunburst", "crown", "swords", "flame", "rose",
+        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "myspec", "warrior_1", "warrior_2", "warrior_3", "paladin_1", "paladin_2", "paladin_3", "hunter_1", "hunter_2", "hunter_3", "rogue_1", "rogue_2", "rogue_3", "priest_1", "priest_2", "priest_3", "shaman_1", "shaman_2", "shaman_3", "mage_1", "mage_2", "mage_3", "warlock_1", "warlock_2", "warlock_3", "druid_1", "druid_2", "druid_3", "compass", "shield", "laurel", "star", "rings", "pinnacle", "sunburst", "crown", "swords", "flame", "rose",
                      "warrior", "paladin", "hunter", "rogue", "priest", "shaman", "mage", "warlock", "druid" },
           names = { pinnacle = "Pinnacle star", sunburst = "Sunburst", crown = "Crown", swords = "Crossed swords", flame = "Flame", rose = "Compass rose", none = "None", mine = "Your class (art)", myspec = "Your spec (art)", warrior_1 = "Warrior: Arms", warrior_2 = "Warrior: Fury", warrior_3 = "Warrior: Protection", paladin_1 = "Paladin: Holy", paladin_2 = "Paladin: Protection", paladin_3 = "Paladin: Retribution", hunter_1 = "Hunter: Beast Mastery", hunter_2 = "Hunter: Marksmanship", hunter_3 = "Hunter: Survival", rogue_1 = "Rogue: Assassination", rogue_2 = "Rogue: Combat", rogue_3 = "Rogue: Subtlety", priest_1 = "Priest: Discipline", priest_2 = "Priest: Holy", priest_3 = "Priest: Shadow", shaman_1 = "Shaman: Elemental", shaman_2 = "Shaman: Enhancement", shaman_3 = "Shaman: Restoration", mage_1 = "Mage: Arcane", mage_2 = "Mage: Fire", mage_3 = "Mage: Frost", warlock_1 = "Warlock: Affliction", warlock_2 = "Warlock: Demonology", warlock_3 = "Warlock: Destruction", druid_1 = "Druid: Balance", druid_2 = "Druid: Feral", druid_3 = "Druid: Restoration", classicon = "Your class (the game's icon)", specicon = "Your talent tree (the game's icon)", faction = "Your faction (the game's crest)", kirintor = "Violet city-state (the game's icon)", crestA = "Alliance crest (the game's icon)", crestH = "Horde crest (the game's icon)",
                     compass = "Compass rose", shield = "Shield", laurel = "Laurel wreath", star = "Eight-point star", rings = "Runic rings",
                     warrior = "Warrior", paladin = "Paladin", hunter = "Hunter", rogue = "Rogue", priest = "Priest", shaman = "Shaman",
                     mage = "Mage", warlock = "Warlock", druid = "Druid" } },
+        { key = "artCustom", kind = "check", label = "Choose the artwork color" },
+        { key = "artColor", kind = "color", label = "Artwork color (all the art in this window)" },
         { key = "wmAlpha", kind = "slider", label = "Emblem strength", min = 0.02, max = 0.5, step = 0.02, fmt = "%.2f" },
         { key = "artSize", kind = "slider", label = "Corner and crest size", min = 16, max = 96, step = 2 },
     } },
@@ -1926,6 +2004,10 @@ local SECTIONS = {
         { key = "btnEdgeSize", kind = "slider", label = "Button line thickness", min = 1, max = 4, step = 1 },
         { key = "btnAlpha", kind = "slider", label = "Button opacity", min = 0.1, max = 1, step = 0.05, fmt = "%.2f" },
         { key = "btnGloss", kind = "check", label = "Glossy highlight on the top half" },
+        { key = "closeStyle", kind = "cycle", label = "Close button (top right)", values = { "default", "boxed", "plain", "red", "filled", "none" },
+          names = { default = "The game's X", boxed = "Boxed X", plain = "Plain X", red = "Red X", filled = "Filled X", none = "Hidden (Escape still closes)" } },
+        { key = "closeSize", kind = "slider", label = "Close button size", min = 14, max = 40, step = 2 },
+        { key = "closeColor", kind = "color", label = "Close button color" },
         { key = "btnNoTint", kind = "check", label = "Show textures in their own colors (no tint)" },
     } },
     { id = "text", title = "Text", rows = {
@@ -1940,7 +2022,7 @@ do   -- add the race and city sigils to the emblem list
         for _, row in ipairs(sec.rows or {}) do
             if row.key == "watermark" then
                 for _, k in ipairs(WM_ORDER) do row.values[#row.values + 1] = k row.names[k] = WM_ICONS[k][2] end
-                for _, f in ipairs(WM_FAITH) do row.values[#row.values + 1] = f[1] row.names[f[1]] = f[2] .. " (symbol)" end
+                for _, f in ipairs(WM_FAITH) do row.values[#row.values + 1] = f[1] row.names[f[1]] = f[2] .. "" end
             end
         end
     end
@@ -2079,7 +2161,7 @@ local function MakeRow(parent, id, row, isExtra)
                     t.bgColor, t.edgeColor, t.titleColor = Copy(p.bg), Copy(p.edge), Copy(p.edge)
                     t.gradMode = "none"
                     if p.look then for lk, lv in pairs(p.look) do t[lk] = Copy(lv) end end
-                    if preset_dyn then t.watermark = preset_dyn == "spec" and "specicon" or "classicon" end   -- the game's own icon
+                    if preset_dyn then t.watermark = preset_dyn == "spec" and "myspec" or "mine" end
                 else
                     t[row.key] = v
                 end
@@ -2401,6 +2483,7 @@ local function Build()
     sub:SetText(cfg.options and "options and look" or "look and feel")
     local x = CreateFrame("Button", nil, win, "UIPanelCloseButton")
     x:SetPoint("TOPRIGHT", 2, 2)
+    win.closeBtn = x
     table.insert(_G.UISpecialFrames, name)
     if cfg.dock then Look.AddDockTabs(win, "look") end
 
@@ -2553,7 +2636,7 @@ local function Build()
     win:SetScript("OnShow", function() if win.DrawSync then win.DrawSync() end if win.DrawShare then win.DrawShare() end if win.DrawProfile then win.DrawProfile() end RefreshAll() end)
     win:SetScript("OnHide", CloseMenu)
     -- the options/look panel takes the same colors, background, border and fonts as the first window
-    local pspec = { id = "_look", name = "Look", strip = "backdrop", noScale = true, title = function() return win.titleFS end }
+    local pspec = { id = "_look", name = "Look", strip = "backdrop", noScale = true, title = function() return win.titleFS end, close = function() return win.closeBtn end }
     byId["_look"] = pspec
     attached["_look"] = win
     Safe(ApplyOne, pspec)

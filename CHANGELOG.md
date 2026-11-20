@@ -1,5 +1,12 @@
 # Guildie
 
+## v1.15.6
+- More emblems: religious, Wiccan, Pagan, Druid, Satanic and occult symbols from many faiths, and the names are tidied.
+- The artwork can have a color of its own (Artwork section): corners, crest, edges, banner, divider and the middle emblem.
+- The close button in the top right can be restyled (the game's X, boxed, plain, red, filled or hidden) with its own size and color.
+- The game-icon emblems (faction crests, race and city icons) are removed; looks that used them show your class emblem.
+- Fixed the list preview staying open after a pick; the divider under the title no longer runs through the search row.
+
 ## v1.15.5
 - Emblem list: Pinnacle star, Sunburst, Crown, Crossed swords, Flame and Compass rose; the game's own race sigils and city banners (Stormwind, Orgrimmar and the rest); religious symbols (cross, Celtic cross, Star of David, crescent and star, Wheel of Dharma, yin and yang, ankh, lotus, hamsa, triquetra, torii gate).
 - Pointing at an entry in the emblem, corner, crest, edge, banner and divider lists shows a small preview of it.
