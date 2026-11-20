@@ -470,7 +470,7 @@ local function Defaults()
         btnTextColor = { 1, 0.82, 0.2 }, btnGloss = false, btnNoTint = false,
         follow = true, edgeFx = "none", depth = 0, topLight = 0, texScale = 1, flair = "gilded", pulse = false,
         cornerArt = "none", crest = "none", artSize = 40,
-        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10, wmX = 0, wmY = 0, wmSize = 62, artCustom = false, artColor = { 0.88, 0.69, 0.29 },
+        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10, wmX = 0, wmY = 0, wmSize = 62, wmRot = 0, wmFlip = false, artCustom = false, artColor = { 0.88, 0.69, 0.29 },
         cornerCustom = false, cornerColor = { 0.88, 0.69, 0.29 }, crestCustom = false, crestColor = { 0.88, 0.69, 0.29 }, edgeCustom = false, edgeArtColor = { 0.88, 0.69, 0.29 },
         bannerCustom = false, bannerColor = { 0.88, 0.69, 0.29 }, dividerCustom = false, dividerColor = { 0.88, 0.69, 0.29 }, emblemCustom = false, emblemColor = { 0.88, 0.69, 0.29 }, closeStyle = "default", closeSize = 22, closeColor = { 0.88, 0.69, 0.29 },
         gradMode = "none", gradFlip = false, gradA = { 0.30, 0.18, 0.55 }, gradB = { 0.04, 0.02, 0.10 }, gradAlphaA = 0.9, gradAlphaB = 0.9, gradOver = "over",
@@ -1000,7 +1000,8 @@ local WM_FAITH = { { "cross", "Cross" }, { "celtic", "Celtic cross" }, { "hexagr
     { "sephirot", "Tree of Life (Kabbalah)" }, { "druze", "Druze star" }, { "yazidi", "Yazidi sun" }, { "medicine", "Medicine wheel" },
     { "invpent", "Inverted pentagram" }, { "baphomet", "Sigil of Baphomet" }, { "leviathan", "Leviathan cross" }, { "hornedgod", "Horned god (Wicca)" },
     { "awen", "Awen (Druid)" }, { "hecate", "Hecate's wheel" }, { "unicursal", "Unicursal hexagram (Thelema)" }, { "chaos", "Chaos star" }, { "ouroboros", "Ouroboros" },
-    { "anarchy", "Anarchy" }, { "peace", "Peace sign" }, { "skull", "Skull and crossbones" }, { "radiation", "Radiation" }, { "atom", "Atom" }, { "infinity", "Infinity" }, { "lightning", "Lightning bolt" }, { "anchor", "Anchor" }, { "helmofawe", "Helm of Awe" }, { "valknut", "Valknut" }, { "providence", "Eye of Providence" }, { "triskele", "Triskele" }, { "fleur", "Fleur-de-lis" } }
+    { "anarchy", "Anarchy" }, { "peace", "Peace sign" }, { "skull", "Skull and crossbones" }, { "radiation", "Radiation" }, { "atom", "Atom" }, { "infinity", "Infinity" }, { "lightning", "Lightning bolt" }, { "anchor", "Anchor" }, { "helmofawe", "Helm of Awe" }, { "valknut", "Valknut" }, { "providence", "Eye of Providence" }, { "triskele", "Triskele" }, { "fleur", "Fleur-de-lis" },
+    { "sword", "Sword" }, { "swords", "Crossed swords" }, { "shield", "Shield" }, { "sun", "Sun" }, { "paw", "Paw print" } }
 
 -- the close button in a window's top right corner: the game's own, or one of ours in a color and size of your choice
 local function StyleClose(spec, frame, s, e)
@@ -1190,6 +1191,7 @@ local function Art2(bg, s, inset, e, spec, frame)
     if wm ~= "none" then
         local t = Tex("wm", "BACKGROUND", 5)
         local tok
+        local fullTc = false
         if UnitClass then local _, tk = UnitClass("player") tok = tk end
         tok = tostring(tok or ""):lower()
         local function ClassIcon()
@@ -1199,7 +1201,7 @@ local function Art2(bg, s, inset, e, spec, frame)
             t:SetVertexColor(1, 1, 1, 1)
         end
         if MyEmblem(wm) then
-            t:SetTexture(m .. "Emblem_" .. MyEmblem(wm)) t:SetTexCoord(0, 1, 0, 1)
+            t:SetTexture(m .. "Emblem_" .. MyEmblem(wm)) t:SetTexCoord(0, 1, 0, 1) fullTc = true
             local mc = (s.emblemCustom and type(s.emblemColor) == "table") and s.emblemColor or { 1, 1, 1 }
             t:SetVertexColor(mc[1], mc[2], mc[3], 1)
         elseif WM_ICONS[wm] then
@@ -1249,7 +1251,7 @@ local function Art2(bg, s, inset, e, spec, frame)
                 end
             end
             t:SetTexture(m .. "Art_Mark_" .. nm)
-            t:SetTexCoord(0, 1, 0, 1) local ec = PCol(s, "emblem", e) t:SetVertexColor(ec[1], ec[2], ec[3], 1)
+            fullTc = true t:SetTexCoord(0, 1, 0, 1) local ec = PCol(s, "emblem", e) t:SetVertexColor(ec[1], ec[2], ec[3], 1)
         end
         local function Fit()
             local w, h = bg:GetWidth() or 0, bg:GetHeight() or 0
@@ -1257,6 +1259,10 @@ local function Art2(bg, s, inset, e, spec, frame)
             if h <= 0 then h = 240 end
             local side = math.max(24, math.min(w, h) * Clamp(s.wmSize, 20, 100, 62) / 100)
             t:SetSize(side, side)
+            if fullTc then
+                if s.wmFlip then t:SetTexCoord(1, 0, 0, 1) else t:SetTexCoord(0, 1, 0, 1) end
+                if t.SetRotation then pcall(t.SetRotation, t, math.rad(Clamp(s.wmRot, 0, 345, 0))) end
+            end
             t:ClearAllPoints()
             t:SetPoint("CENTER", bg, "CENTER", w * Clamp(s.wmX, -50, 50, 0) / 100, -8 + h * Clamp(s.wmY, -50, 50, 0) / 100)
         end
@@ -2034,6 +2040,8 @@ local SECTIONS = {
         { key = "wmX", kind = "slider", label = "Emblem position: left / right", min = -50, max = 50, step = 1, fmt = "%d" },
         { key = "wmY", kind = "slider", label = "Emblem position: down / up", min = -50, max = 50, step = 1, fmt = "%d" },
         { key = "wmSize", kind = "slider", label = "Emblem size", min = 20, max = 100, step = 2, fmt = "%d" },
+        { key = "wmRot", kind = "slider", label = "Emblem rotation", min = 0, max = 345, step = 15, fmt = "%d" },
+        { key = "wmFlip", kind = "check", label = "Emblem: mirror left to right" },
         { key = "artSize", kind = "slider", label = "Corner and crest size", min = 16, max = 96, step = 2 },
     } },
     { id = "buttons", title = "Buttons", rows = {
