@@ -970,6 +970,29 @@ end
 
 -- more artwork: a strip along every edge, a banner behind the title, a divider under it and a faint emblem in the middle.
 -- Everything is optional and tinted with the border color.
+-- the game's own race and city icons, pointed at by path (nothing is copied)
+local WM_ICONS = {}
+local WM_ORDER = {}
+do
+    local races = { { "human", "Human", "Human", "Stormwind" }, { "dwarf", "Dwarf", "Dwarf", "Ironforge" }, { "nightelf", "Night elf", "NightElf", "Darnassus" },
+        { "gnome", "Gnome", "Gnome", "Gnomeregan" }, { "draenei", "Draenei", "Draenei", "The Exodar" }, { "orc", "Orc", "Orc", "Orgrimmar" },
+        { "undead", "Undead", "Scourge", "Undercity" }, { "tauren", "Tauren", "Tauren", "Thunder Bluff" }, { "troll", "Troll", "Troll", "Darkspear" },
+        { "bloodelf", "Blood elf", "BloodElf", "Silvermoon" } }
+    for _, r in ipairs(races) do
+        local k = "race_" .. r[1]
+        WM_ICONS[k] = { "Interface\\Icons\\INV_Misc_Tournaments_symbol_" .. r[3], r[2] .. " sigil (the game's icon)" }
+        WM_ORDER[#WM_ORDER + 1] = k
+    end
+    for _, r in ipairs(races) do
+        local k = "city_" .. r[1]
+        WM_ICONS[k] = { "Interface\\Icons\\INV_Misc_Tournaments_banner_" .. r[3], r[4] .. " banner (the game's icon)" }
+        WM_ORDER[#WM_ORDER + 1] = k
+    end
+end
+local WM_FAITH = { { "cross", "Cross" }, { "celtic", "Celtic cross" }, { "hexagram", "Star of David" }, { "crescent", "Crescent and star" },
+    { "dharma", "Wheel of Dharma" }, { "yinyang", "Yin and yang" }, { "ankh", "Ankh" }, { "lotus", "Lotus" }, { "hamsa", "Hamsa" },
+    { "triquetra", "Triquetra" }, { "torii", "Torii gate" } }
+
 local function Art2(bg, s, inset, e, spec, frame)
     local a = bg.lookArt
     if not a then a = {} bg.lookArt = a end
@@ -1017,14 +1040,29 @@ local function Art2(bg, s, inset, e, spec, frame)
     -- a banner behind the title text
     local bandH = 0
     local bn = s.banner or "none"
+    do   -- put the title back where its window had it before any banner moved it
+        local f0 = spec and spec.title and spec.title(frame)
+        if f0 and f0._lkPt and not (bn ~= "none") then
+            local p = f0._lkPt
+            f0:ClearAllPoints() f0:SetPoint(p[1], p[2], p[3], p[4], p[5]) f0._lkPt = nil
+        end
+    end
     if bn ~= "none" and spec and spec.title then
         local fs = spec.title(frame)
         if fs and fs.GetStringWidth then
             bandH = Clamp(hh + 6, 24, 44, 32)
             local w = math.max(60, (fs:GetStringWidth() or 0) + 24)
+            -- the title and its banner sit together in the middle of the top edge
+            if not fs._lkPt then
+                local a, r, rp, x, y = fs:GetPoint(1)
+                if a then fs._lkPt = { a, r, rp, x, y } end
+            end
+            fs:ClearAllPoints()
+            fs:SetPoint("CENTER", bg, "TOP", 0, -(inset + bandH / 2 + 2))
+            if fs.SetJustifyH then fs:SetJustifyH("CENTER") end
             local mid = Tex("bM", "ARTWORK", 2)
             mid:SetTexture(m .. "Art_Banner_" .. bn .. "_M")
-            mid:SetPoint("CENTER", fs, "CENTER", 0, 0) mid:SetSize(w, bandH) mid:Show()
+            mid:SetPoint("CENTER", bg, "TOP", 0, -(inset + bandH / 2 + 2)) mid:SetSize(w, bandH) mid:Show()
             local l = Tex("bL", "ARTWORK", 2)
             l:SetTexture(m .. "Art_Banner_" .. bn .. "_L")
             l:SetPoint("RIGHT", mid, "LEFT", 0, 0) l:SetSize(bandH, bandH) l:Show()
@@ -1065,17 +1103,20 @@ local function Art2(bg, s, inset, e, spec, frame)
             if c then t:SetTexCoord(c[1], c[2], c[3], c[4]) end
             t:SetVertexColor(1, 1, 1, 1)
         end
-        if wm == "crestA" or wm == "crestH" then
-            t:SetTexture("Interface\\TargetingFrame\\UI-PVP-" .. (wm == "crestA" and "Alliance" or "Horde"))
-            t:SetTexCoord(0, 0.62, 0, 0.62) t:SetVertexColor(1, 1, 1, 1)
+        if WM_ICONS[wm] then
+            t:SetTexture(WM_ICONS[wm][1])
+            t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1)
+        elseif wm == "crestA" or wm == "crestH" then
+            t:SetTexture(wm == "crestA" and "Interface\\PVPFrame\\PVP-Currency-Alliance" or "Interface\\PVPFrame\\PVP-Currency-Horde")
+            t:SetTexCoord(0, 1, 0, 1) t:SetVertexColor(1, 1, 1, 1)
         elseif wm == "kirintor" then
             t:SetTexture("Interface\\Icons\\Achievement_Reputation_KirinTor")
             t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1)
         elseif wm == "faction" then
             local fg = _G.UnitFactionGroup and _G.UnitFactionGroup("player")
             if fg == "Horde" or fg == "Alliance" then
-                t:SetTexture("Interface\\TargetingFrame\\UI-PVP-" .. fg)
-                t:SetTexCoord(0, 0.62, 0, 0.62) t:SetVertexColor(1, 1, 1, 1)
+                t:SetTexture("Interface\\PVPFrame\\PVP-Currency-" .. fg)
+                t:SetTexCoord(0, 1, 0, 1) t:SetVertexColor(1, 1, 1, 1)
             else ClassIcon() end
         elseif wm == "classicon" then
             ClassIcon()
@@ -1640,6 +1681,66 @@ local menu, catcher
 local function CloseMenu()
     if menu then menu:Hide() end
     if catcher then catcher:Hide() end
+    if preview then preview:Hide() end
+end
+
+-- a little preview beside the list: point at an entry and see what it looks like
+local preview
+local PREVIEW_ROWS = { watermark = true, cornerArt = true, crest = true, edgeArt = true, banner = true, divider = true }
+local function SetPreview(rowKey, v, menuFrame)
+    if not PREVIEW_ROWS[rowKey] or v == nil or v == "none" then if preview then preview:Hide() end return end
+    local m = (cfg and cfg.media) or ""
+    if not preview then
+        preview = Box(UIParent, 168, 188, { 0.05, 0.05, 0.07 }, GOLD)
+        preview:SetFrameStrata("TOOLTIP")
+        preview.tex = preview:CreateTexture(nil, "ARTWORK")
+        preview.tex:SetPoint("TOP", 0, -12) preview.tex:SetSize(144, 144)
+        preview.cap = Text(preview, 10, DIM, "CENTER")
+        preview.cap:SetPoint("BOTTOM", 0, 10) preview.cap:SetWidth(156)
+        preview:Hide()
+    end
+    local t = preview.tex
+    t:SetVertexColor(GOLD[1], GOLD[2], GOLD[3], 1)
+    t:SetTexCoord(0, 1, 0, 1)
+    t:SetSize(144, 144)
+    local tok
+    if UnitClass then local _, tk = UnitClass("player") tok = tostring(tk or ""):lower() end
+    if tok == "" then tok = nil end
+    local own = (v == "mine" and (tok or "star")) or (v == "myspec" and ((tok or "star") .. "_1")) or v
+    if rowKey == "watermark" then
+        if WM_ICONS[v] then
+            t:SetTexture(WM_ICONS[v][1]) t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1)
+        elseif v == "crestA" or v == "crestH" then
+            t:SetTexture(v == "crestA" and "Interface\\PVPFrame\\PVP-Currency-Alliance" or "Interface\\PVPFrame\\PVP-Currency-Horde") t:SetVertexColor(1, 1, 1, 1)
+        elseif v == "kirintor" then
+            t:SetTexture("Interface\\Icons\\Achievement_Reputation_KirinTor") t:SetTexCoord(0.07, 0.93, 0.07, 0.93) t:SetVertexColor(1, 1, 1, 1)
+        elseif v == "faction" then
+            local fg = _G.UnitFactionGroup and _G.UnitFactionGroup("player")
+            t:SetTexture("Interface\\PVPFrame\\PVP-Currency-" .. ((fg == "Alliance") and "Alliance" or "Horde")) t:SetVertexColor(1, 1, 1, 1)
+        elseif v == "classicon" or v == "specicon" then
+            t:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CharacterCreate-Classes")
+            local c = _G.CLASS_ICON_TCOORDS and tok and _G.CLASS_ICON_TCOORDS[tok:upper()]
+            if c then t:SetTexCoord(c[1], c[2], c[3], c[4]) end
+            t:SetVertexColor(1, 1, 1, 1)
+        else
+            t:SetTexture(m .. "Art_Mark_" .. own)
+        end
+    elseif rowKey == "cornerArt" then
+        t:SetTexture(m .. "Art_Corner_" .. own) t:SetSize(110, 110)
+    elseif rowKey == "crest" then
+        t:SetTexture(m .. "Art_Crest_" .. own)
+    elseif rowKey == "edgeArt" then
+        t:SetTexture(m .. "Art_Edge_" .. v .. "_h") t:SetSize(150, 36)
+    elseif rowKey == "banner" then
+        t:SetTexture(m .. "Art_Banner_" .. v .. "_M") t:SetSize(150, 40)
+    elseif rowKey == "divider" then
+        t:SetTexture(m .. "Art_Divider_" .. v) t:SetSize(128, 32)
+    end
+    preview.cap:SetText(((menuFrame and menuFrame.names and menuFrame.names[v]) or tostring(v)))
+    preview:ClearAllPoints()
+    local left = menuFrame and menuFrame:GetLeft() or 0
+    if left > 190 then preview:SetPoint("TOPRIGHT", menuFrame, "TOPLEFT", -4, 0) else preview:SetPoint("TOPLEFT", menuFrame, "TOPRIGHT", 4, 0) end
+    preview:Show()
 end
 
 local MAXVIS = 14
@@ -1662,6 +1763,8 @@ local function OpenDropdown(anchor, row, get, set)
         menu:Hide()
     end
     menu.anchor = anchor
+    menu.names = row.names
+    if preview then preview:Hide() end
     local cur = get()
     local n = #row.values
     local vis = math.min(n, MAXVIS)
@@ -1700,7 +1803,7 @@ local function OpenDropdown(anchor, row, get, set)
                     it.text:SetPoint("RIGHT", -6, 0)
                     it.text:SetJustifyH("LEFT")
                     if it.text.SetWordWrap then it.text:SetWordWrap(false) end
-                    it:SetScript("OnEnter", function(self) self.hl:Show() end)
+                    it:SetScript("OnEnter", function(self) self.hl:Show() if self.pv then SetPreview(self.pv[1], self.pv[2], menu) end end)
                     it:SetScript("OnLeave", function(self) self.hl:Hide() end)
                     menu.items[i] = it
                 end
@@ -1709,6 +1812,7 @@ local function OpenDropdown(anchor, row, get, set)
                 it:SetPoint("TOPRIGHT", menu, "TOPRIGHT", -3, -3 - (i - 1) * 22)
                 local v = row.values[off + i]
                 it.text:SetText((row.names and row.names[v]) or tostring(v))
+                it.pv = PREVIEW_ROWS[row.key] and { row.key, v } or nil
                 -- every font is shown in its own face
                 local face = (row.key == "font" and FONT_PATH[v]) or FONT
                 if not pcall(it.text.SetFont, it.text, face, 12, "") then it.text:SetFont(FONT, 11, "") end
@@ -1801,9 +1905,9 @@ local SECTIONS = {
           names = { none = "None", ribbon = "Ribbon", plaque = "Riveted plaque", scroll = "Scroll", gem = "Jeweled plate" } },
         { key = "divider", kind = "cycle", label = "Divider under the title", values = { "none", "flourish", "beads", "diamond" },
           names = { none = "None", flourish = "Flourish", beads = "Beads", diamond = "Diamonds" } },
-        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "myspec", "warrior_1", "warrior_2", "warrior_3", "paladin_1", "paladin_2", "paladin_3", "hunter_1", "hunter_2", "hunter_3", "rogue_1", "rogue_2", "rogue_3", "priest_1", "priest_2", "priest_3", "shaman_1", "shaman_2", "shaman_3", "mage_1", "mage_2", "mage_3", "warlock_1", "warlock_2", "warlock_3", "druid_1", "druid_2", "druid_3", "classicon", "specicon", "faction", "crestA", "crestH", "kirintor", "compass", "shield", "laurel", "star", "rings",
+        { key = "watermark", kind = "cycle", label = "Emblem in the middle of the window", values = { "none", "mine", "myspec", "warrior_1", "warrior_2", "warrior_3", "paladin_1", "paladin_2", "paladin_3", "hunter_1", "hunter_2", "hunter_3", "rogue_1", "rogue_2", "rogue_3", "priest_1", "priest_2", "priest_3", "shaman_1", "shaman_2", "shaman_3", "mage_1", "mage_2", "mage_3", "warlock_1", "warlock_2", "warlock_3", "druid_1", "druid_2", "druid_3", "classicon", "specicon", "faction", "crestA", "crestH", "kirintor", "compass", "shield", "laurel", "star", "rings", "pinnacle", "sunburst", "crown", "swords", "flame", "rose",
                      "warrior", "paladin", "hunter", "rogue", "priest", "shaman", "mage", "warlock", "druid" },
-          names = { none = "None", mine = "Your class (art)", myspec = "Your spec (art)", warrior_1 = "Warrior: Arms", warrior_2 = "Warrior: Fury", warrior_3 = "Warrior: Protection", paladin_1 = "Paladin: Holy", paladin_2 = "Paladin: Protection", paladin_3 = "Paladin: Retribution", hunter_1 = "Hunter: Beast Mastery", hunter_2 = "Hunter: Marksmanship", hunter_3 = "Hunter: Survival", rogue_1 = "Rogue: Assassination", rogue_2 = "Rogue: Combat", rogue_3 = "Rogue: Subtlety", priest_1 = "Priest: Discipline", priest_2 = "Priest: Holy", priest_3 = "Priest: Shadow", shaman_1 = "Shaman: Elemental", shaman_2 = "Shaman: Enhancement", shaman_3 = "Shaman: Restoration", mage_1 = "Mage: Arcane", mage_2 = "Mage: Fire", mage_3 = "Mage: Frost", warlock_1 = "Warlock: Affliction", warlock_2 = "Warlock: Demonology", warlock_3 = "Warlock: Destruction", druid_1 = "Druid: Balance", druid_2 = "Druid: Feral", druid_3 = "Druid: Restoration", classicon = "Your class (the game's icon)", specicon = "Your talent tree (the game's icon)", faction = "Your faction (the game's crest)", kirintor = "Violet city-state (the game's icon)", crestA = "Alliance crest (the game's icon)", crestH = "Horde crest (the game's icon)",
+          names = { pinnacle = "Pinnacle star", sunburst = "Sunburst", crown = "Crown", swords = "Crossed swords", flame = "Flame", rose = "Compass rose", none = "None", mine = "Your class (art)", myspec = "Your spec (art)", warrior_1 = "Warrior: Arms", warrior_2 = "Warrior: Fury", warrior_3 = "Warrior: Protection", paladin_1 = "Paladin: Holy", paladin_2 = "Paladin: Protection", paladin_3 = "Paladin: Retribution", hunter_1 = "Hunter: Beast Mastery", hunter_2 = "Hunter: Marksmanship", hunter_3 = "Hunter: Survival", rogue_1 = "Rogue: Assassination", rogue_2 = "Rogue: Combat", rogue_3 = "Rogue: Subtlety", priest_1 = "Priest: Discipline", priest_2 = "Priest: Holy", priest_3 = "Priest: Shadow", shaman_1 = "Shaman: Elemental", shaman_2 = "Shaman: Enhancement", shaman_3 = "Shaman: Restoration", mage_1 = "Mage: Arcane", mage_2 = "Mage: Fire", mage_3 = "Mage: Frost", warlock_1 = "Warlock: Affliction", warlock_2 = "Warlock: Demonology", warlock_3 = "Warlock: Destruction", druid_1 = "Druid: Balance", druid_2 = "Druid: Feral", druid_3 = "Druid: Restoration", classicon = "Your class (the game's icon)", specicon = "Your talent tree (the game's icon)", faction = "Your faction (the game's crest)", kirintor = "Violet city-state (the game's icon)", crestA = "Alliance crest (the game's icon)", crestH = "Horde crest (the game's icon)",
                     compass = "Compass rose", shield = "Shield", laurel = "Laurel wreath", star = "Eight-point star", rings = "Runic rings",
                     warrior = "Warrior", paladin = "Paladin", hunter = "Hunter", rogue = "Rogue", priest = "Priest", shaman = "Shaman",
                     mage = "Mage", warlock = "Warlock", druid = "Druid" } },
@@ -1830,6 +1934,17 @@ local SECTIONS = {
         { key = "outline", kind = "check", label = "Outline the text" },
     } },
 }
+
+do   -- add the race and city sigils to the emblem list
+    for _, sec in ipairs(SECTIONS) do
+        for _, row in ipairs(sec.rows or {}) do
+            if row.key == "watermark" then
+                for _, k in ipairs(WM_ORDER) do row.values[#row.values + 1] = k row.names[k] = WM_ICONS[k][2] end
+                for _, f in ipairs(WM_FAITH) do row.values[#row.values + 1] = f[1] row.names[f[1]] = f[2] .. " (symbol)" end
+            end
+        end
+    end
+end
 
 local function Target(id) if id == "_opts" then return {} end return Own(id) end
 
@@ -2266,7 +2381,7 @@ end
 
 local function Build()
     local name = tostring(cfg.title) .. "LookOptions"
-    win = Box(UIParent, 472, 640, PANEL, GOLD)
+    win = Box(UIParent, 472, cfg.dock and 660 or 640, PANEL, GOLD)
     _G[name] = win
     win:SetFrameStrata("DIALOG")
     win:SetToplevel(true)
@@ -2287,6 +2402,7 @@ local function Build()
     local x = CreateFrame("Button", nil, win, "UIPanelCloseButton")
     x:SetPoint("TOPRIGHT", 2, 2)
     table.insert(_G.UISpecialFrames, name)
+    if cfg.dock then Look.AddDockTabs(win, "look") end
 
     local top = -44
     if #windows > 1 then
@@ -2486,6 +2602,41 @@ end
 function Look.Note(text) return { kind = "note", label = text } end
 function Look.Button(label, fn, width) return { kind = "button", label = label, onClick = fn, width = width } end
 
+-- an add-on with its own options window can dock it with the look window: one window, two tabs
+function Look.AddDockTabs(frame, current)
+    if not (cfg and cfg.dock) or frame.dockTabs then return end
+    frame.dockTabs = {}
+    local list = { { "opts", cfg.dock.name or "Options" }, { "look", "Look" } }
+    local prev
+    for i = #list, 1, -1 do
+        local id, label = list[i][1], list[i][2]
+        local b = CreateFrame("Button", nil, frame)
+        b:SetSize(66, 20)
+        if prev then b:SetPoint("RIGHT", prev, "LEFT", -3, 0) else b:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -36, -10) end
+        b.bg = b:CreateTexture(nil, "BACKGROUND") b.bg:SetAllPoints(b) b.bg:SetTexture(WHITE)
+        local on = (id == current)
+        b.bg:SetVertexColor(on and GOLD[1] or 1, on and GOLD[2] or 1, on and GOLD[3] or 1, on and 0.28 or 0.06)
+        b.text = Text(b, 11, on and GOLD or { 0.85, 0.85, 0.85 }, "CENTER") b.text:SetPoint("CENTER") b.text:SetText(label)
+        b:SetScript("OnEnter", function(s) if id ~= current then s.bg:SetVertexColor(1, 1, 1, 0.14) end end)
+        b:SetScript("OnLeave", function(s) if id ~= current then s.bg:SetVertexColor(1, 1, 1, 0.06) end end)
+        b:SetScript("OnClick", function()
+            if id == current then return end
+            if id == "look" then Look.OpenAt(frame) else cfg.dock.show(frame) end
+        end)
+        frame.dockTabs[id] = b
+        prev = b
+    end
+end
+
+function Look.OpenAt(from)
+    Look.Open()
+    if from and win and from ~= win and from.GetLeft and from:GetLeft() then
+        win:ClearAllPoints()
+        win:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", from:GetLeft(), from:GetTop())
+        from:Hide()
+    end
+end
+
 function Look.Open(id)
     if not (cfg and Store()) then return end
     if not win then Build() end
@@ -2497,7 +2648,9 @@ end
 function Look.OpenOptions() Look.Open(cfg and cfg.options and "_opts" or nil) end
 
 function Look.Toggle()
-    if win and win:IsShown() then win:Hide() else Look.Open() end
+    if win and win:IsShown() then win:Hide()
+    elseif cfg and cfg.dock and cfg.dock.frame and cfg.dock.frame() then Look.OpenAt(cfg.dock.frame())
+    else Look.Open() end
 end
 
 -- cfg: { title = "MyAddon", db = function() return MyAddonDB end, media = "Interface\\AddOns\\MyAddon\\Media\\",

@@ -1,5 +1,10 @@
 # Guildie
 
+## v1.15.5
+- Emblem list: Pinnacle star, Sunburst, Crown, Crossed swords, Flame and Compass rose; the game's own race sigils and city banners (Stormwind, Orgrimmar and the rest); religious symbols (cross, Celtic cross, Star of David, crescent and star, Wheel of Dharma, yin and yang, ankh, lotus, hamsa, triquetra, torii gate).
+- Pointing at an entry in the emblem, corner, crest, edge, banner and divider lists shows a small preview of it.
+- The Horde and Alliance crests use the game's round PvP emblem; the title banner is centered with the title.
+
 ## v1.15.4
 - Gradients: pick both colors, each end's opacity, vertical, horizontal, diagonal, middle-out or center-to-borders, over or instead of the background texture; plus a theme with its own emblem, corners, crest and edge for every talent spec, and a "My spec" automatic theme.
 - Look profiles: save your look under a name and switch between saved looks at any time; every character remembers which profile it wears (Look panel, top).
