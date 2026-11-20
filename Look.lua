@@ -1002,6 +1002,10 @@ local WM_FAITH = { { "cross", "Cross" }, { "celtic", "Celtic cross" }, { "hexagr
     { "awen", "Awen (Druid)" }, { "hecate", "Hecate's wheel" }, { "unicursal", "Unicursal hexagram (Thelema)" }, { "chaos", "Chaos star" }, { "ouroboros", "Ouroboros" },
     { "anarchy", "Anarchy" }, { "peace", "Peace sign" }, { "skull", "Skull and crossbones" }, { "radiation", "Radiation" }, { "atom", "Atom" }, { "infinity", "Infinity" }, { "lightning", "Lightning bolt" }, { "anchor", "Anchor" }, { "helmofawe", "Helm of Awe" }, { "valknut", "Valknut" }, { "providence", "Eye of Providence" }, { "triskele", "Triskele" }, { "fleur", "Fleur-de-lis" },
     { "sword", "Sword" }, { "swords", "Crossed swords" }, { "shield", "Shield" }, { "sun", "Sun" }, { "paw", "Paw print" } }
+do   -- a calligraphic, ornately framed variant of every symbol
+    local n = #WM_FAITH
+    for i = 1, n do WM_FAITH[#WM_FAITH + 1] = { WM_FAITH[i][1] .. "_cal", WM_FAITH[i][2] .. " (calligraphic)" } end
+end
 
 -- the close button in a window's top right corner: the game's own, or one of ours in a color and size of your choice
 local function StyleClose(spec, frame, s, e)
