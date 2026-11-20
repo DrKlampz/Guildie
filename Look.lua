@@ -999,7 +999,8 @@ local WM_FAITH = { { "cross", "Cross" }, { "celtic", "Celtic cross" }, { "hexagr
     { "ikonkar", "Ik Onkar (Sikh)" }, { "faravahar", "Faravahar (Zoroastrian)" }, { "bagua", "Bagua (Taoist)" },
     { "sephirot", "Tree of Life (Kabbalah)" }, { "druze", "Druze star" }, { "yazidi", "Yazidi sun" }, { "medicine", "Medicine wheel" },
     { "invpent", "Inverted pentagram" }, { "baphomet", "Sigil of Baphomet" }, { "leviathan", "Leviathan cross" }, { "hornedgod", "Horned god (Wicca)" },
-    { "awen", "Awen (Druid)" }, { "hecate", "Hecate's wheel" }, { "unicursal", "Unicursal hexagram (Thelema)" }, { "chaos", "Chaos star" }, { "ouroboros", "Ouroboros" } }
+    { "awen", "Awen (Druid)" }, { "hecate", "Hecate's wheel" }, { "unicursal", "Unicursal hexagram (Thelema)" }, { "chaos", "Chaos star" }, { "ouroboros", "Ouroboros" },
+    { "anarchy", "Anarchy" }, { "peace", "Peace sign" }, { "skull", "Skull and crossbones" }, { "radiation", "Radiation" }, { "atom", "Atom" }, { "infinity", "Infinity" }, { "lightning", "Lightning bolt" }, { "anchor", "Anchor" }, { "helmofawe", "Helm of Awe" }, { "valknut", "Valknut" }, { "providence", "Eye of Providence" }, { "triskele", "Triskele" }, { "fleur", "Fleur-de-lis" } }
 
 -- the close button in a window's top right corner: the game's own, or one of ours in a color and size of your choice
 local function StyleClose(spec, frame, s, e)
@@ -2077,6 +2078,10 @@ local function MakeRow(parent, id, row, isExtra)
     local function put(v)
         if row.set then row.set(v) return end
         T()[row.key] = v
+        if row.kind == "color" and type(row.key) == "string" then   -- picking a color switches its own-color option on
+            local ck = (row.key == "edgeArtColor") and "edgeCustom" or (row.key:gsub("Color$", "Custom"))
+            if ck ~= row.key and T()[ck] == false then T()[ck] = true end
+        end
         -- changing any look setting turns that window's custom look on, so it shows at once
         if not isExtra and id ~= "_opts" and row.key ~= "enabled" then T().enabled = true end
     end
