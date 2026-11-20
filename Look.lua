@@ -470,7 +470,7 @@ local function Defaults()
         btnTextColor = { 1, 0.82, 0.2 }, btnGloss = false, btnNoTint = false,
         follow = true, edgeFx = "none", depth = 0, topLight = 0, texScale = 1, flair = "gilded", pulse = false,
         cornerArt = "none", crest = "none", artSize = 40,
-        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10, artCustom = false, artColor = { 0.88, 0.69, 0.29 },
+        edgeArt = "none", artEdge = 10, banner = "none", divider = "none", watermark = "none", wmAlpha = 0.10, wmX = 0, wmY = 0, wmSize = 62, artCustom = false, artColor = { 0.88, 0.69, 0.29 },
         cornerCustom = false, cornerColor = { 0.88, 0.69, 0.29 }, crestCustom = false, crestColor = { 0.88, 0.69, 0.29 }, edgeCustom = false, edgeArtColor = { 0.88, 0.69, 0.29 },
         bannerCustom = false, bannerColor = { 0.88, 0.69, 0.29 }, dividerCustom = false, dividerColor = { 0.88, 0.69, 0.29 }, emblemCustom = false, emblemColor = { 0.88, 0.69, 0.29 }, closeStyle = "default", closeSize = 22, closeColor = { 0.88, 0.69, 0.29 },
         gradMode = "none", gradFlip = false, gradA = { 0.30, 0.18, 0.55 }, gradB = { 0.04, 0.02, 0.10 }, gradAlphaA = 0.9, gradAlphaB = 0.9, gradOver = "over",
@@ -1253,14 +1253,16 @@ local function Art2(bg, s, inset, e, spec, frame)
         end
         local function Fit()
             local w, h = bg:GetWidth() or 0, bg:GetHeight() or 0
-            local side = math.max(48, math.min(w > 0 and w or 240, h > 0 and h or 240) * 0.62)
+            if w <= 0 then w = 240 end
+            if h <= 0 then h = 240 end
+            local side = math.max(24, math.min(w, h) * Clamp(s.wmSize, 20, 100, 62) / 100)
             t:SetSize(side, side)
+            t:ClearAllPoints()
+            t:SetPoint("CENTER", bg, "CENTER", w * Clamp(s.wmX, -50, 50, 0) / 100, -8 + h * Clamp(s.wmY, -50, 50, 0) / 100)
         end
-        t:SetPoint("CENTER", bg, "CENTER", 0, -8)
         Fit()
-        if not bg.lookWmHook and bg.HookScript then bg.lookWmHook = true bg:HookScript("OnSizeChanged", function() if a.wm and a.wm:IsShown() then pcall(function()
-            local w, h = bg:GetWidth() or 0, bg:GetHeight() or 0
-            local side = math.max(48, math.min(w, h) * 0.62) a.wm:SetSize(side, side) end) end end) end
+        bg.lookWmFit = Fit
+        if not bg.lookWmHook and bg.HookScript then bg.lookWmHook = true bg:HookScript("OnSizeChanged", function() if a.wm and a.wm:IsShown() and bg.lookWmFit then pcall(bg.lookWmFit) end end) end
         t:SetAlpha(Clamp(s.wmAlpha, 0.02, 0.5, 0.10))
         t:Show()
     end
@@ -2029,6 +2031,9 @@ local SECTIONS = {
         { key = "emblemCustom", kind = "check", label = "Middle emblem: own color" },
         { key = "emblemColor", kind = "color", label = "Middle emblem color" },
         { key = "wmAlpha", kind = "slider", label = "Emblem strength", min = 0.02, max = 0.5, step = 0.02, fmt = "%.2f" },
+        { key = "wmX", kind = "slider", label = "Emblem position: left / right", min = -50, max = 50, step = 1, fmt = "%d" },
+        { key = "wmY", kind = "slider", label = "Emblem position: down / up", min = -50, max = 50, step = 1, fmt = "%d" },
+        { key = "wmSize", kind = "slider", label = "Emblem size", min = 20, max = 100, step = 2, fmt = "%d" },
         { key = "artSize", kind = "slider", label = "Corner and crest size", min = 16, max = 96, step = 2 },
     } },
     { id = "buttons", title = "Buttons", rows = {
