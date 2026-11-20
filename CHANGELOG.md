@@ -1,5 +1,9 @@
 # Guildie
 
+## v1.15.10
+
+- Redrawn anarchy symbol with a hand-brushed, worn look
+
 ## v1.15.9
 
 - New background symbols: sword, crossed swords, shield, sun and paw print
