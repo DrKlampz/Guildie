@@ -1,5 +1,9 @@
 # Guildie
 
+## v1.15.11
+
+- Release packaging fixed so the zip is built and published again
+
 ## v1.15.10
 
 - Redrawn anarchy symbol with a hand-brushed, worn look
