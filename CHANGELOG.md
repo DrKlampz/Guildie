@@ -2,6 +2,7 @@
 
 ## v1.15.11
 
+- Windows, including the Armory, can now be closed in combat
 - Release packaging fixed so the zip is built and published again
 
 ## v1.15.10
