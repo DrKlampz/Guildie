@@ -118,19 +118,7 @@ end
 -- Build the window
 ---------------------------------------------------------------------------
 local function CreateShell()
-    local ok, f = pcall(CreateFrame, "Frame", "GuildieFrame", UIParent, "BasicFrameTemplateWithInset")
-
-    if not ok or not f then
-        f = CreateFrame("Frame", "GuildieFrame", UIParent)
-    end
-    if not f.TitleBg then
-        -- Fallback look if the template isn't available on this client
-        local bg = f:CreateTexture(nil, "BACKGROUND")
-        bg:SetAllPoints()
-        bg:SetColorTexture(0.06, 0.06, 0.08, 0.96)
-        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-        close:SetPoint("TOPRIGHT", 2, 2)
-    end
+    local f = ns.WinLook.NewWindow("GuildieFrame")
 
     local title = f.TitleText
     if not title then

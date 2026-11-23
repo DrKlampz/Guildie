@@ -1613,6 +1613,42 @@ function Look.Attach(id, frame)
     end
 end
 
+-- A plain window frame for an add-on's main window (no Blizzard window template): title, close button, drag,
+-- Escape-to-close. Built like Baggie's window, which the game lets you close in combat. The title is frame.TitleText
+-- (also frame.title) and the close button is frame.closeBtn; list the window in Setup with
+-- strip = "backdrop", hide = { "bar" }, title = function(f) return f.title end, close = function(f) return f.closeBtn end.
+function Look.NewWindow(name, w, h, titleText)
+    local f = CreateFrame("Frame", name, UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    if w and h then f:SetSize(w, h) end
+    f:SetFrameStrata("DIALOG")
+    f:SetToplevel(true)
+    f:SetClampedToScreen(true)
+    f:SetMovable(true)
+    f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    f:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+    f:SetBackdropColor(PANEL[1], PANEL[2], PANEL[3], 0.96)
+    f:SetBackdropBorderColor(GOLD[1], GOLD[2], GOLD[3], 0.9)
+    local bar = f:CreateTexture(nil, "ARTWORK")
+    f.bar = bar
+    bar:SetTexture(WHITE)
+    bar:SetVertexColor(0.13, 0.11, 0.07, 1)
+    bar:SetPoint("TOPLEFT", 1, -1) bar:SetPoint("TOPRIGHT", -1, -1) bar:SetHeight(26)
+    local t = f:CreateFontString(nil, "OVERLAY")
+    t:SetFont("Fonts\\MORPHEUS.TTF", 15, "")
+    t:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
+    t:SetPoint("TOPLEFT", 12, -7)
+    t:SetText(titleText or "")
+    f.title, f.TitleText = t, t
+    local x = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    x:SetPoint("TOPRIGHT", 2, 1)
+    f.closeBtn = x
+    if name and _G.UISpecialFrames then table.insert(_G.UISpecialFrames, name) end
+    return f
+end
+
 function Look.Apply() ApplyAll() end
 function Look.Get(id) return Own(id) end
 function Look.Effective(id) return Eff(id) end

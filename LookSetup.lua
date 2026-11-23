@@ -57,7 +57,7 @@ ns.WinLook.Setup({
     media = "Interface\\AddOns\\Guildie\\media\\",
     db = function() return GuildieDB end,
     windows = {
-        { id = "main", name = "Main window", global = "GuildieFrame", strip = "template", defaultOn = true, title = function(f) return f.TitleText end },
-        { id = "armory", name = "Armory", global = "GuildieArmoryFrame", strip = "template", defaultOn = true, title = function(f) return f.TitleText end },
+        { id = "main", name = "Main window", global = "GuildieFrame", strip = "backdrop", hide = { "bar" }, defaultOn = true, title = function(f) return f.title end, close = function(f) return f.closeBtn end },
+        { id = "armory", name = "Armory", global = "GuildieArmoryFrame", strip = "backdrop", hide = { "bar" }, defaultOn = true, title = function(f) return f.title end, close = function(f) return f.closeBtn end },
     },
 })

@@ -457,15 +457,7 @@ local function Label(parent, font, text)
 end
 
 local function Build()
-    local ok, f = pcall(CreateFrame, "Frame", "GuildieArmoryFrame", UIParent, "BasicFrameTemplateWithInset")
-    if not ok or not f then f = CreateFrame("Frame", "GuildieArmoryFrame", UIParent) end
-    if not f.TitleBg then
-        local bg = f:CreateTexture(nil, "BACKGROUND")
-        bg:SetAllPoints()
-        bg:SetColorTexture(0.06, 0.06, 0.08, 0.96)
-        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-        close:SetPoint("TOPRIGHT", 2, 2)
-    end
+    local f = ns.WinLook.NewWindow("GuildieArmoryFrame")
     local title = f.TitleText or Label(f, "GameFontHighlight")
     if not f.TitleText then title:SetPoint("TOP", 0, -5) end
     title:SetText("|cff33ff99Guildie|r Armory")
