@@ -1,5 +1,9 @@
 # Guildie
 
+## v1.15.13
+
+- Fixed: with "Group alts" on, an alt who was online was hidden behind their offline main. Anyone online now keeps their own row
+
 ## v1.15.12
 
 - Windows, including the Armory, can now be closed in combat

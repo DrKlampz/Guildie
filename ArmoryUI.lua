@@ -213,8 +213,9 @@ local function BuildEntries()
                     end
                 end
             end
+            -- an alt who is online right now keeps their own row, so nobody online is hidden behind their main
             for i = #entries, 1, -1 do
-                if entries[i].mainKey ~= entries[i].key then table.remove(entries, i) end
+                if entries[i].mainKey ~= entries[i].key and not entries[i].online then table.remove(entries, i) end
             end
         end
     end
