@@ -1,0 +1,39 @@
+name: Auto tag release
+
+# When the top version in CHANGELOG.md has no tag yet, tag it and start the
+# "Package and release" workflow on that tag. Run it by hand from the Actions
+# tab to release whatever the changelog currently says.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [CHANGELOG.md]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag the new version and release it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ver=$(grep -m1 -oE '^## v?[0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | sed -E 's/^## v?//')
+          if [ -z "$ver" ]; then echo "No version heading found in CHANGELOG.md"; exit 1; fi
+          tag="v$ver"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists, nothing to do"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$tag"
+          git push origin "$tag"
+          # Tags pushed with the built-in token do not start other workflows, so start it directly.
+          gh workflow run release.yml --ref "$tag"
+          echo "Tagged $tag and started the release"

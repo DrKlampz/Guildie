@@ -27,5 +27,5 @@ jobs:
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: "1555748496165048391"
-          DISCORD_MODE: ${{ github.event_name == 'workflow_dispatch' && 'sync' || 'release' }}
+          DISCORD_MODE: ${{ (github.event_name == 'push' || github.ref_type == 'tag') && 'release' || 'sync' }}
         run: bash .github/discord-notify.sh
