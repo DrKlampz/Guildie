@@ -3,7 +3,7 @@
 -- the add-on's own files, actions the game blocked, and problems the add-on reports itself.
 -- Read it with /issues, or Ctrl+click an add-on's minimap button. Nothing is sent anywhere.
 local ADDON, NS = ...
-local VERSION = 3
+local VERSION = 4
 local DB_GLOBAL = "GuildieDB"        -- the add-on's SavedVariables table; the log lives inside it
 local MAX_ENTRIES = 60
 local MAX_LEN = 500
@@ -66,10 +66,13 @@ if not D or (D.v or 0) < VERSION then
             if Secret(zone) then zone = "" end
             list[#list + 1] = { kind = kind, what = what, msg = msg, n = 1, first = now, last = now,
                 ver = reg.version, build = select(2, GetBuildInfo()), combat = combat, zone = zone }
-            while #list > MAX_ENTRIES do        -- drop the entry that has gone longest without happening again
-                local oldest, at = 1, math.huge
-                for i, e in ipairs(list) do if (e.last or 0) < at then oldest, at = i, (e.last or 0) end end
-                table.remove(list, oldest)
+            while #list > MAX_ENTRIES do        -- drop the entry that has gone longest without happening again; notes go before real issues
+                local oldest, at = nil, math.huge
+                for i, e in ipairs(list) do if e.kind == "note" and (e.last or 0) < at then oldest, at = i, (e.last or 0) end end
+                if not oldest then
+                    for i, e in ipairs(list) do if (e.last or 0) < at then oldest, at = i, (e.last or 0) end end
+                end
+                table.remove(list, oldest or 1)
             end
             if D.Refresh then D.Refresh() end
         end)
@@ -89,16 +92,30 @@ if not D or (D.v or 0) < VERSION then
         if D.Refresh then D.Refresh() end
     end
 
-    function D.Count(name) return #D.List(name) end
+    -- kind "note" is for things worth keeping that are not problems (a throttled auction house, a sound that played, an item
+    -- skipped on purpose). Notes are kept apart: they are not counted as issues and are read under the Notes button.
+    local function Split(list, notes)
+        local out = {}
+        for _, e in ipairs(list) do if (e.kind == "note") == (notes and true or false) then out[#out + 1] = e end end
+        return out
+    end
+    function D.Count(name) return #Split(D.List(name), false) end
+    function D.NoteCount(name)
+        local n = 0
+        for _, nm in ipairs(name and { name } or D.order) do n = n + #Split(D.List(nm), true) end
+        return n
+    end
 
-    local KIND = { lua = "error", blocked = "blocked", warn = "warning" }
-    function D.Text(name)
+    local KIND = { lua = "error", blocked = "blocked", warn = "warning", note = "note" }
+    function D.Text(name, notes)
         local names = name and { name } or D.order
         local out = {}
+        local word = notes and "note" or "issue"
+        if notes then out[#out + 1] = "Notes: things the add-ons recorded that are not problems.\n" end
         for _, n in ipairs(names) do
-            local list = D.List(n)
+            local list = Split(D.List(n), notes)
             if #list > 0 then
-                out[#out + 1] = ("== %s %s  (%d issue%s)"):format(n, tostring(D.addons[n] and D.addons[n].version or ""), #list, #list == 1 and "" or "s")
+                out[#out + 1] = ("== %s %s  (%d %s%s)"):format(n, tostring(D.addons[n] and D.addons[n].version or ""), #list, word, #list == 1 and "" or "s")
                 local sorted = {}                       -- newest first, by when it last happened
                 for i, e in ipairs(list) do sorted[i] = { e = e, i = i } end
                 table.sort(sorted, function(a, b)
@@ -116,7 +133,7 @@ if not D or (D.v or 0) < VERSION then
                 out[#out + 1] = ""
             end
         end
-        if #out == 0 then return "No issues recorded." end
+        if #out == 0 or (notes and #out == 1) then return "No " .. word .. "s recorded." end
         out[#out + 1] = "Game build " .. tostring(select(2, GetBuildInfo()))
         return table.concat(out, "\n")
     end
@@ -161,7 +178,7 @@ if not D or (D.v or 0) < VERSION then
                         local _, db = Buffer(n)
                         local seen = (type(db) == "table" and db.issueSeen) or 0
                         local fresh = 0
-                        for _, e in ipairs(list) do if (e.last or 0) > seen then fresh = fresh + 1 end end
+                        for _, e in ipairs(list) do if (e.last or 0) > seen and e.kind ~= "note" then fresh = fresh + 1 end end
                         if fresh > 0 then
                             print(("|cffff8844%s:|r %d issue%s logged. Type |cffffd100/issues|r to read %s."):format(n, fresh,
                                 fresh == 1 and "" or "s", fresh == 1 and "it" or "them"))
@@ -222,6 +239,7 @@ if not D or (D.v or 0) < VERSION then
         Btn("Copy all", 90, 14, function() eb:SetFocus() eb:HighlightText() end)
         Btn("Clear", 80, 112, function() D.Clear(current) end)
         Btn("Run tests", 100, 200, function() D.RunTests(current) end)
+        win.notesBtn = Btn("Notes", 90, 308, function() D.view = (D.view == "notes") and nil or "notes" D.Refresh() end)
         local hint = win:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         hint:SetPoint("BOTTOMRIGHT", -16, 18)
         hint:SetText("Copy all, then Ctrl+C. Paste it to Claude.")
@@ -254,7 +272,8 @@ if not D or (D.v or 0) < VERSION then
             b:Show()
         end
         for i = #names + 1, #win.tabs do win.tabs[i]:Hide() end
-        win.text = (D.view == "tests" and D.testText) or D.Text(current)
+        if win.notesBtn then win.notesBtn:SetText(D.view == "notes" and "Back to issues" or ("Notes (%d)"):format(D.NoteCount(current))) win.notesBtn:SetWidth(D.view == "notes" and 120 or 90) end
+        win.text = (D.view == "tests" and D.testText) or D.Text(current, D.view == "notes")
         win.eb:SetText(win.text)
         win.eb:SetCursorPosition(0)
     end
