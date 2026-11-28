@@ -1,5 +1,9 @@
 # Guildie
 
+## v1.15.15
+
+- Changed: the Look options window is roomier, so the controls no longer crowd each other
+
 ## v1.15.14
 
 - New: crests for the window watermark. Pick one from the watermark/emblem list in the Look options: the Horde and Alliance crests, the Alliance lion, Kirin Tor, a Horde symbol, and a crest for every race (Human, Dwarf, Night Elf, Gnome, Draenei, Worgen, Orc, Troll, Tauren, Forsaken, Blood Elf, Goblin, Pandaren). The race and faction crests always show in their own colors

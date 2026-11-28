@@ -2625,7 +2625,7 @@ local function Build()
         end)
         win.DrawSync = Draw
         win.syncBox, win.syncLbl, win.syncBtn = sync, sl, sbtn
-        top = -70
+        top = -74
     end
 
     do   -- look profiles: save a look under a name and switch between them (each character remembers its own)
@@ -2663,7 +2663,7 @@ local function Build()
             del:SetShown(n ~= "Default")
         end
         win.DrawProfile()
-        top = top - 60
+        top = top - 66
     end
 
     do   -- share my look with my other add-ons
@@ -2683,20 +2683,28 @@ local function Build()
         btn2:SetScript("OnClick", function() ShareToggle() Draw2() end)
         win.DrawShare = Draw2
         Draw2()
-        top = top - 24
+        top = top - 32
     end
 
     win.tabs = {}
     local tabList = {}
     if cfg.options then tabList[#tabList + 1] = { id = "_opts", name = cfg.optionsName or "Options" } end
     for _, spec in ipairs(windows) do tabList[#tabList + 1] = spec end
+    local extraH = 0
     if #tabList > 1 then
-        local prev
-        local tw = math.floor((472 - 24 - (#tabList - 1) * 4) / #tabList)
+        -- each tab is as wide as its name needs; tabs that do not fit in one row go on the next row
+        local prev, rowX, rowY, rows = nil, 12, top, 1
+        local avail = 472 - 24
         for _, spec in ipairs(tabList) do
             local b = CreateFrame("Button", nil, win)
+            local meas = Text(b, 12, { 0.85, 0.85, 0.85 }, "CENTER")
+            meas:SetText(spec.name)
+            local tw = math.max(60, math.ceil((meas:GetStringWidth() or 60)) + 20)
+            meas:Hide()
+            if rowX > 12 and rowX - 12 + tw > avail then rowX, rowY, rows = 12, rowY - 30, rows + 1 end
             b:SetSize(tw, 26)
-            if prev then b:SetPoint("LEFT", prev, "RIGHT", 4, 0) else b:SetPoint("TOPLEFT", win, "TOPLEFT", 12, top) end
+            b:SetPoint("TOPLEFT", win, "TOPLEFT", rowX, rowY)
+            rowX = rowX + tw + 4
             b.bg = b:CreateTexture(nil, "BACKGROUND")
             b.bg:SetAllPoints(b)
             b.bg:SetTexture(WHITE)
@@ -2714,11 +2722,14 @@ local function Build()
             win.tabs[spec.id] = b
             prev = b
         end
-        top = top - 32
+        top = top - 32 - (rows - 1) * 30
+        extraH = (rows - 1) * 30
     else
         top = top - 4
     end
 
+    -- the rows above (header, profile, tabs) take their own room; the window grows by what they added
+    win:SetHeight((cfg.dock and 660 or 640) + extraH + 20)
     scroll = CreateFrame("ScrollFrame", nil, win, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 10, top)
     scroll:SetPoint("BOTTOMRIGHT", -30, 46)
