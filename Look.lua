@@ -987,7 +987,13 @@ end
 local WM_ICONS = {}
 -- emblems you supply yourself: put Emblem_<Name>.tga (or .blp) in the add-on's Media folder and pick "Your file: <Name>"
 local MY_EMBLEMS = { "Horde", "Alliance", "Human", "Orc", "Dwarf", "NightElf", "Undead", "Tauren", "Gnome", "Troll", "BloodElf", "Draenei",
-    "Stormwind", "Orgrimmar", "Ironforge", "Darnassus", "Undercity", "ThunderBluff", "Silvermoon", "Exodar", "Shattrath", "Dalaran" }
+    "AllianceLion", "KirinTor", "HordeSymbol", "Goblin", "Pandaren", "Worgen" }
+-- these four ship with the add-on (Emblem_<Name>.tga in Media), so they get a real name in the list
+local SHIPPED_EMBLEMS = { Horde = "Horde crest", Alliance = "Alliance crest", AllianceLion = "Alliance lion", KirinTor = "Kirin Tor", HordeSymbol = "Horde symbol",
+    Goblin = "Goblin", BloodElf = "Blood Elf", Undead = "Forsaken", Tauren = "Tauren", Troll = "Troll", Orc = "Orc", Pandaren = "Pandaren", Worgen = "Worgen",
+    Draenei = "Draenei", Gnome = "Gnome", NightElf = "Night Elf", Dwarf = "Dwarf", Human = "Human" }
+-- full-color artwork: never tinted
+local FULL_COLOR = { Horde = true, Alliance = true, Goblin = true, BloodElf = true, Undead = true, Tauren = true, Troll = true, Orc = true, Pandaren = true, Worgen = true, Draenei = true, Gnome = true, NightElf = true, Dwarf = true, Human = true }
 local function MyEmblem(v) return type(v) == "string" and v:sub(1, 3) == "my_" and v:sub(4) or nil end
 local WM_ORDER = {}
 local WM_FAITH = { { "cross", "Cross" }, { "celtic", "Celtic cross" }, { "hexagram", "Star of David" }, { "crescent", "Crescent and star" },
@@ -1206,7 +1212,7 @@ local function Art2(bg, s, inset, e, spec, frame)
         end
         if MyEmblem(wm) then
             t:SetTexture(m .. "Emblem_" .. MyEmblem(wm)) t:SetTexCoord(0, 1, 0, 1) fullTc = true
-            local mc = (s.emblemCustom and type(s.emblemColor) == "table") and s.emblemColor or { 1, 1, 1 }
+            local mc = (s.emblemCustom and type(s.emblemColor) == "table" and not FULL_COLOR[MyEmblem(wm)]) and s.emblemColor or (MyEmblem(wm) == "HordeSymbol" and { 0.98, 0.02, 0.02 } or { 1, 1, 1 })
             t:SetVertexColor(mc[1], mc[2], mc[3], 1)
         elseif WM_ICONS[wm] then
             t:SetTexture(WM_ICONS[wm][1])
@@ -2114,7 +2120,7 @@ do   -- add the race and city sigils to the emblem list
         for _, row in ipairs(sec.rows or {}) do
             if row.key == "watermark" then
                 for _, k in ipairs(WM_ORDER) do row.values[#row.values + 1] = k row.names[k] = WM_ICONS[k][2] end
-                for _, n in ipairs(MY_EMBLEMS) do row.values[#row.values + 1] = "my_" .. n row.names["my_" .. n] = "Your file: " .. n end
+                for _, n in ipairs(MY_EMBLEMS) do row.values[#row.values + 1] = "my_" .. n row.names["my_" .. n] = SHIPPED_EMBLEMS[n] or ("Your file: " .. n) end
                 for _, f in ipairs(WM_FAITH) do row.values[#row.values + 1] = f[1] row.names[f[1]] = f[2] .. "" end
             end
         end
